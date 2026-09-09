@@ -27,7 +27,30 @@ else:
 
 CACHE_FILE = os.path.join(RUNTIME_DIR, "pixelbuds_state.json")
 LOCK_FILE = os.path.join(RUNTIME_DIR, "pixelbuds_pbpctrl.lock")
+DAEMON_SOCKET = os.path.join(RUNTIME_DIR, "pbpctrl.sock")
 CACHE_TTL = 2.5 # seconds
+
+def try_daemon_cmd(cmd_line, timeout=2.0):
+    if not os.path.exists(DAEMON_SOCKET):
+        return None
+    try:
+        import socket
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        s.connect(DAEMON_SOCKET)
+        s.sendall(f"{cmd_line}\n".encode("utf-8"))
+        data = b""
+        while not data.endswith(b"\n"):
+            chunk = s.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+        s.close()
+        if data:
+            return json.loads(data.decode("utf-8").strip())
+    except Exception:
+        pass
+    return None
 
 def find_device():
     env_mac = os.environ.get("PIXELBUDS_MAC")
@@ -109,6 +132,52 @@ def run_pbpctrl(args, mac=None):
 
 
 def get_status(force=False):
+    # 1. Fast path: check persistent connection daemon
+    d_stat = try_daemon_cmd("status", timeout=1.0)
+    if d_stat and d_stat.get("status") == "ok":
+        if not d_stat.get("connected"):
+            return {"connected": False, "error": "Not connected"}
+        dev = d_stat.get("device") or {}
+        bat = d_stat.get("battery") or {}
+        place = d_stat.get("placement") or {}
+        anc = d_stat.get("anc") or {}
+        sets = d_stat.get("settings") or {}
+
+        b_left = bat.get("left") or {}
+        b_right = bat.get("right") or {}
+        b_case = bat.get("case") or {}
+
+        g_left = sets.get("gesture_left", "assistant")
+
+        res = {
+            "connected": True,
+            "mac": dev.get("mac") or "",
+            "device_name": dev.get("name") or "Pixel Buds Pro",
+            "model_name": "Google Pixel Buds Pro",
+            "battery_left": b_left.get("level") if b_left.get("level") is not None else -1,
+            "charging_left": b_left.get("charging", False),
+            "battery_right": b_right.get("level") if b_right.get("level") is not None else -1,
+            "charging_right": b_right.get("charging", False),
+            "battery_case": b_case.get("level") if b_case.get("level") is not None else -1,
+            "charging_case": b_case.get("charging", False),
+            "placement_left": place.get("left", "unknown"),
+            "placement_right": place.get("right", "unknown"),
+            "noise_mode": anc.get("state", "off"),
+            "eq": sets.get("eq", [0.0, 0.0, 0.0, 0.0, 0.0]),
+            "ohd": sets.get("ohd", True),
+            "speech_detection": sets.get("speech_detection", False),
+            "gesture_control": g_left,
+            "hold_anc": g_left == "anc",
+            "_timestamp": d_stat.get("timestamp", time.time()),
+        }
+        try:
+            with open(CACHE_FILE, "w") as f:
+                json.dump(res, f)
+        except Exception:
+            pass
+        return res
+
+    # 2. Fallback to cold binary connection
     mac, name = find_device()
     if not mac:
         return {"connected": False, "error": "Not connected"}
@@ -220,14 +289,29 @@ def get_status(force=False):
     return status
 
 def set_anc(mode):
-    mac, _ = find_device()
-    if not mac:
-        return {"error": "Not connected"}
     target = mode.lower()
     if target == "transparency":
         target = "aware"
     elif target == "anc":
         target = "active"
+
+    d_res = try_daemon_cmd(f"set-anc {target}")
+    if d_res and d_res.get("status") == "ok":
+        if os.path.exists(CACHE_FILE):
+            try:
+                with open(CACHE_FILE, "r") as f:
+                    data = json.load(f)
+                data["noise_mode"] = target
+                data["_timestamp"] = time.time()
+                with open(CACHE_FILE, "w") as f:
+                    json.dump(data, f)
+            except Exception:
+                pass
+        return {"status": "ok", "mode": target}
+
+    mac, _ = find_device()
+    if not mac:
+        return {"error": "Not connected"}
 
     code, _, err = run_pbpctrl(["set", "anc", target], mac)
     if code == 0:
@@ -246,6 +330,21 @@ def set_anc(mode):
         return {"status": "error", "error": err or "Failed to set ANC"}
 
 def cycle_anc():
+    d_res = try_daemon_cmd("cycle-anc")
+    if d_res and d_res.get("status") == "ok":
+        new_mode = d_res.get("anc", "active")
+        if os.path.exists(CACHE_FILE):
+            try:
+                with open(CACHE_FILE, "r") as f:
+                    data = json.load(f)
+                data["noise_mode"] = new_mode
+                data["_timestamp"] = time.time()
+                with open(CACHE_FILE, "w") as f:
+                    json.dump(data, f)
+            except Exception:
+                pass
+        return {"status": "ok", "mode": new_mode}
+
     curr = None
     if os.path.exists(CACHE_FILE):
         try:
@@ -272,6 +371,10 @@ def cycle_anc():
     return set_anc(next_mode)
 
 def set_eq(bands):
+    d_res = try_daemon_cmd("set-eq " + " ".join(str(b) for b in bands))
+    if d_res and d_res.get("status") == "ok":
+        return {"status": "ok", "eq": bands}
+
     mac, _ = find_device()
     if not mac:
         return {"error": "Not connected"}
@@ -281,34 +384,58 @@ def set_eq(bands):
     return {"status": "error", "error": err}
 
 def set_ohd(val):
+    v = "true" if str(val).lower() in ("true", "1", "yes") else "false"
+    d_res = try_daemon_cmd(f"set-ohd {v}")
+    if d_res and d_res.get("status") == "ok":
+        return {"status": "ok", "ohd": v == "true"}
+
     mac, _ = find_device()
     if not mac:
         return {"error": "Not connected"}
-    v = "true" if str(val).lower() in ("true", "1", "yes") else "false"
     code, _, err = run_pbpctrl(["set", "ohd", v], mac)
     if code == 0:
         return {"status": "ok", "ohd": v == "true"}
     return {"status": "error", "error": err}
 
 def set_speech_detection(val):
+    v = "true" if str(val).lower() in ("true", "1", "yes") else "false"
+    d_res = try_daemon_cmd(f"set-speech-detection {v}")
+    if d_res and d_res.get("status") == "ok":
+        return {"status": "ok", "speech_detection": v == "true"}
+
     mac, _ = find_device()
     if not mac:
         return {"error": "Not connected"}
-    v = "true" if str(val).lower() in ("true", "1", "yes") else "false"
     code, _, err = run_pbpctrl(["set", "speech-detection", v], mac)
     if code == 0:
         return {"status": "ok", "speech_detection": v == "true"}
     return {"status": "error", "error": err}
 
 def set_gesture_control(action):
-    mac, _ = find_device()
-    if not mac:
-        return {"error": "Not connected"}
     act_lower = str(action).lower().strip()
     if act_lower in ("anc", "noise_cancellation", "true", "1", "yes"):
         target = "anc"
     else:
         target = "assistant"
+
+    d_res = try_daemon_cmd(f"set-gesture-control {target} {target}")
+    if d_res and d_res.get("status") == "ok":
+        if os.path.exists(CACHE_FILE):
+            try:
+                with open(CACHE_FILE, "r") as f:
+                    data = json.load(f)
+                data["gesture_control"] = target
+                data["hold_anc"] = (target == "anc")
+                data["_timestamp"] = time.time()
+                with open(CACHE_FILE, "w") as f:
+                    json.dump(data, f)
+            except Exception:
+                pass
+        return {"status": "ok", "gesture_control": target, "hold_anc": target == "anc"}
+
+    mac, _ = find_device()
+    if not mac:
+        return {"error": "Not connected"}
 
     code, _, err = run_pbpctrl(["set", "gesture-control", target, target], mac)
     if code == 0:

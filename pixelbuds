@@ -17,6 +17,42 @@ if [ -z "$BIN" ] || [ ! -x "$BIN" ]; then
     exit 1
 fi
 
+DAEMON_SOCK="${XDG_RUNTIME_DIR:-/tmp/pixelbuds_$(id -u)}/pbpctrl.sock"
+if [ -S "$DAEMON_SOCK" ] && command -v pbpctrld >/dev/null 2>&1; then
+    case "$1" in
+        anc)
+            if [ -z "$2" ]; then
+                pbpctrld get-anc
+            elif [ "$2" = "cycle" ] || [ "$2" = "toggle" ]; then
+                pbpctrld cycle-anc
+            else
+                pbpctrld set-anc "$2"
+            fi
+            exit 0
+            ;;
+        cycle-anc|cycle)
+            pbpctrld cycle-anc
+            exit 0
+            ;;
+        battery|bat)
+            pbpctrld battery
+            exit 0
+            ;;
+        status|info)
+            pbpctrld status
+            exit 0
+            ;;
+        gesture|hold)
+            if [ -z "$2" ]; then
+                pbpctrld get-gesture
+            else
+                pbpctrld set-gesture both "$2"
+            fi
+            exit 0
+            ;;
+    esac
+fi
+
 DEVICE="${DEVICE:-$(bluetoothctl devices Connected 2>/dev/null | grep -iE 'pixel buds|pixelbuds' | head -n1 | awk '{print $2}')}"
 if [ -z "$DEVICE" ]; then
     echo "Error: No connected Pixel Buds detected." >&2
