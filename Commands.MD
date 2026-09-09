@@ -160,7 +160,7 @@ pbpctrl set speech-detection true
 
 ---
 
-## 7. Noctalia Desktop Shell Plugin (`jazden/pixelbuds`)
+## 7. Noctalia Desktop Shell Plugin (`pixelbudspropanel/pixelbuds`)
 
 A native desktop shell integration for [Noctalia](https://noctalia.dev/) is included in the [`plugin/`](./plugin) directory (and installed at `~/.local/share/noctalia/plugins/pixelbuds`).
 
@@ -190,11 +190,11 @@ export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 ln -s "$(pwd)/plugin" ~/.local/share/noctalia/plugins/pixelbuds
 
 # Enable in Noctalia
-noctalia msg plugins enable jazden/pixelbuds
+noctalia msg plugins enable pixelbudspropanel/pixelbuds
 
 # Toggle panel via IPC
-noctalia msg panel-toggle jazden/pixelbuds:panel
+noctalia msg panel-toggle pixelbudspropanel/pixelbuds:panel
 
 # Cycle noise modes via IPC / keybind
-noctalia msg plugin jazden/pixelbuds:service all cycle-noise
+noctalia msg plugin pixelbudspropanel/pixelbuds:service all cycle-noise
 ```

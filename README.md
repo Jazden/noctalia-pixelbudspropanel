@@ -51,7 +51,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/Jazden/noctalia-pixelbudspropanel.git
+git clone https://github.com/pixelbudspropanel/noctalia-pixelbudspropanel.git
 cd noctalia-pixelbudspropanel
 ```
 
@@ -63,7 +63,7 @@ ln -s "$(pwd)/plugin" ~/.local/share/noctalia/plugins/pixelbuds
 
 ### 3. Enable the Plugin in Noctalia
 ```bash
-noctalia msg plugins enable jazden/pixelbuds
+noctalia msg plugins enable pixelbudspropanel/pixelbuds
 ```
 
 ### 4. Add the Widget to Your Bar
@@ -81,17 +81,17 @@ You can bind Noctalia IPC commands to window manager key combinations (e.g. Niri
 
 | Action | Command |
 | :--- | :--- |
-| **Toggle Control Panel** | `noctalia msg panel-toggle jazden/pixelbuds:panel` |
-| **Open Control Panel** | `noctalia msg panel-open jazden/pixelbuds:panel` |
-| **Close Control Panel** | `noctalia msg panel-close jazden/pixelbuds:panel` |
-| **Cycle Noise Modes** | `noctalia msg plugin jazden/pixelbuds:service all cycle-noise` |
-| **Set Mode: ANC** | `noctalia msg plugin jazden/pixelbuds:service all set-noise active` |
-| **Set Mode: Transparency** | `noctalia msg plugin jazden/pixelbuds:service all set-noise aware` |
-| **Set Mode: Off** | `noctalia msg plugin jazden/pixelbuds:service all set-noise off` |
-| **Toggle Hold Gesture** | `noctalia msg plugin jazden/pixelbuds:service all toggle-gesture` |
-| **Set Hold Gesture: ANC** | `noctalia msg plugin jazden/pixelbuds:service all set-gesture anc` |
-| **Set Hold Gesture: Assistant** | `noctalia msg plugin jazden/pixelbuds:service all set-gesture assistant` |
-| **Force Refresh** | `noctalia msg plugin jazden/pixelbuds:service all refresh` |
+| **Toggle Control Panel** | `noctalia msg panel-toggle pixelbudspropanel/pixelbuds:panel` |
+| **Open Control Panel** | `noctalia msg panel-open pixelbudspropanel/pixelbuds:panel` |
+| **Close Control Panel** | `noctalia msg panel-close pixelbudspropanel/pixelbuds:panel` |
+| **Cycle Noise Modes** | `noctalia msg plugin pixelbudspropanel/pixelbuds:service all cycle-noise` |
+| **Set Mode: ANC** | `noctalia msg plugin pixelbudspropanel/pixelbuds:service all set-noise active` |
+| **Set Mode: Transparency** | `noctalia msg plugin pixelbudspropanel/pixelbuds:service all set-noise aware` |
+| **Set Mode: Off** | `noctalia msg plugin pixelbudspropanel/pixelbuds:service all set-noise off` |
+| **Toggle Hold Gesture** | `noctalia msg plugin pixelbudspropanel/pixelbuds:service all toggle-gesture` |
+| **Set Hold Gesture: ANC** | `noctalia msg plugin pixelbudspropanel/pixelbuds:service all set-gesture anc` |
+| **Set Hold Gesture: Assistant** | `noctalia msg plugin pixelbudspropanel/pixelbuds:service all set-gesture assistant` |
+| **Force Refresh** | `noctalia msg plugin pixelbudspropanel/pixelbuds:service all refresh` |
 
 ### Window Manager Configuration Examples:
 
@@ -99,23 +99,23 @@ You can bind Noctalia IPC commands to window manager key combinations (e.g. Niri
 ```kdl
 binds {
     // Toggle Pixel Buds control panel
-    Mod+Shift+P { spawn "noctalia" "msg" "panel-toggle" "jazden/pixelbuds:panel"; }
+    Mod+Shift+P { spawn "noctalia" "msg" "panel-toggle" "pixelbudspropanel/pixelbuds:panel"; }
 
     // Cycle through ANC -> Transparency -> Off
-    Mod+Shift+N { spawn "noctalia" "msg" "plugin" "jazden/pixelbuds:service" "all" "cycle-noise"; }
+    Mod+Shift+N { spawn "noctalia" "msg" "plugin" "pixelbudspropanel/pixelbuds:service" "all" "cycle-noise"; }
 }
 ```
 
 #### Hyprland (`~/.config/hypr/hyprland.conf`):
 ```ini
-bind = $mainMod SHIFT, P, exec, noctalia msg panel-toggle jazden/pixelbuds:panel
-bind = $mainMod SHIFT, N, exec, noctalia msg plugin jazden/pixelbuds:service all cycle-noise
+bind = $mainMod SHIFT, P, exec, noctalia msg panel-toggle pixelbudspropanel/pixelbuds:panel
+bind = $mainMod SHIFT, N, exec, noctalia msg plugin pixelbudspropanel/pixelbuds:service all cycle-noise
 ```
 
 #### Sway / i3 (`~/.config/sway/config`):
 ```ini
-bindsym $mod+Shift+p exec noctalia msg panel-toggle jazden/pixelbuds:panel
-bindsym $mod+Shift+n exec noctalia msg plugin jazden/pixelbuds:service all cycle-noise
+bindsym $mod+Shift+p exec noctalia msg panel-toggle pixelbudspropanel/pixelbuds:panel
+bindsym $mod+Shift+n exec noctalia msg plugin pixelbudspropanel/pixelbuds:service all cycle-noise
 ```
 
 ---

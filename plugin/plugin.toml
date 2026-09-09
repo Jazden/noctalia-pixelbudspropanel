@@ -1,11 +1,11 @@
 # Pixel Buds Pro for Noctalia
 # Controls Google Pixel Buds Pro (battery, ANC modes, EQ, in-ear detection).
 
-id = "jazden/pixelbuds"
+id = "pixelbudspropanel/pixelbuds"
 name = "Pixel Buds Pro"
 version = "1.0.0"
 plugin_api = 24
-author = "jazden"
+author = "pixelbudspropanel"
 license = "MIT"
 icon = "headphones"
 description = "Pixel Buds Pro battery monitor, ANC / Transparency modes, and 5-band equalizer in the bar and popup panel."
@@ -24,8 +24,8 @@ id = "pixelbuds"
 entry = "widget.luau"
 
   [widget.actions]
-  left = "panel-toggle jazden/pixelbuds:panel"
-  right = "plugin jazden/pixelbuds:service all cycle-noise"
+  left = "panel-toggle pixelbudspropanel/pixelbuds:panel"
+  right = "plugin pixelbudspropanel/pixelbuds:service all cycle-noise"
 
   [[widget.setting]]
   key = "hide_when_disconnected"
