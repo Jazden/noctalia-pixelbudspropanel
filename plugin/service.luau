@@ -222,6 +222,31 @@ local function executeCommand(cmdObj)
 				pollStatus(true)
 			end
 		end)
+	elseif cmdObj.action == "set-fast-pair-scan" then
+		local enabled = (cmdObj.value == true or cmdObj.value == "true")
+		mutateSnapshot(function(s) s.fast_pair_scan = enabled end)
+		local cmd = getCliCmd("set-config", "fast-pair-scan", enabled and "true" or "false")
+		noctalia.runAsync(cmd, function(result)
+			if result and result.exitCode ~= 0 then
+				pollStatus(true)
+			end
+		end)
+	elseif cmdObj.action == "set-scan-interval" then
+		local secs = tonumber(cmdObj.value) or 10
+		mutateSnapshot(function(s) s.scan_interval_secs = secs end)
+		local cmd = getCliCmd("set-config", "scan-interval", tostring(secs))
+		noctalia.runAsync(cmd, function(result)
+			if result and result.exitCode ~= 0 then
+				pollStatus(true)
+			end
+		end)
+	elseif cmdObj.action == "connect-device" then
+		local cur = noctalia.state.get(SNAPSHOT_KEY)
+		local mac = (cur and cur.mac) or nil
+		local cmd = mac and getCliCmd("connect", mac) or getCliCmd("connect")
+		noctalia.runAsync(cmd, function(result)
+			pollStatus(true)
+		end)
 	elseif cmdObj.action == "refresh" then
 		pollStatus(true)
 	end

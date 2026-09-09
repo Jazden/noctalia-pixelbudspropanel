@@ -45,7 +45,12 @@
     "left_col": "Left",
     "right_col": "Right",
     "gesture_anc": "Noise Control (ANC)",
-    "gesture_assistant": "Google Assistant"
+    "gesture_assistant": "Google Assistant",
+    "fast_pair_scan": "Fast Pair BLE Scanning",
+    "fast_pair_scan_desc": "Detect nearby presence and availability when disconnected",
+    "scan_interval": "BLE Scan Interval",
+    "nearby_detected": "Nearby (Fast Pair detected)",
+    "connect_button": "Connect Earbuds"
   },
   "plugin": {
     "description": "Battery monitor, active noise cancellation (ANC), and 5-band equalizer control for Google Pixel Buds Pro",

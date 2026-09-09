@@ -459,6 +459,72 @@ local function render()
 						}),
 					}),
 				}),
+
+				ui.separator({ thickness = 1, color = "outline/0.15" }),
+
+				-- Fast Pair BLE Scanning Toggle
+				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+					ui.column({ flexGrow = 1, gap = 1 }, {
+						ui.label({ text = noctalia.tr("panel.fast_pair_scan") or "Fast Pair BLE Scanning", fontSize = 12, color = "on_surface" }),
+						ui.label({ text = noctalia.tr("panel.fast_pair_scan_desc") or "Detect presence and availability when disconnected", fontSize = 11, color = "on_surface_variant" }),
+					}),
+					ui.toggle({
+						checked = snapshot.fast_pair_scan ~= false,
+						onChange = function(v)
+							local enabled = (v == true or v == "true")
+							snapshot.fast_pair_scan = enabled
+							sendCommand("set-fast-pair-scan", enabled)
+							render()
+						end,
+					}),
+				}),
+
+				-- BLE Scan Interval Row
+				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+					ui.label({ text = noctalia.tr("panel.scan_interval") or "BLE Scan Interval", fontSize = 12, color = "on_surface" }),
+					ui.row({ align = "center", gap = 4 }, {
+						ui.button({
+							controlSize = "sm",
+							variant = ((snapshot.scan_interval_secs or 10) == 5) and "secondary" or "ghost",
+							text = "5s",
+							onClick = function()
+								snapshot.scan_interval_secs = 5
+								render()
+								sendCommand("set-scan-interval", 5)
+							end,
+						}),
+						ui.button({
+							controlSize = "sm",
+							variant = ((snapshot.scan_interval_secs or 10) == 10) and "secondary" or "ghost",
+							text = "10s",
+							onClick = function()
+								snapshot.scan_interval_secs = 10
+								render()
+								sendCommand("set-scan-interval", 10)
+							end,
+						}),
+						ui.button({
+							controlSize = "sm",
+							variant = ((snapshot.scan_interval_secs or 10) == 15) and "secondary" or "ghost",
+							text = "15s",
+							onClick = function()
+								snapshot.scan_interval_secs = 15
+								render()
+								sendCommand("set-scan-interval", 15)
+							end,
+						}),
+						ui.button({
+							controlSize = "sm",
+							variant = ((snapshot.scan_interval_secs or 10) == 30) and "secondary" or "ghost",
+							text = "30s",
+							onClick = function()
+								snapshot.scan_interval_secs = 30
+								render()
+								sendCommand("set-scan-interval", 30)
+							end,
+						}),
+					}),
+				}),
 			}))
 		else
 			table.insert(body, ui.column({ gap = 0 }, {
@@ -467,34 +533,60 @@ local function render()
 		end
 	else
 		-- Not connected state
-		table.insert(body, ui.column({ align = "center", gap = 12, padding = 24 }, {
+		local isNearby = snapshot.nearby == true
+		local rssiText = snapshot.rssi and string.format(" • %d dBm", snapshot.rssi) or ""
+		local notConnChildren = {
 			ui.image({
 				path = headerIconPath(),
-				width = 96,
-				height = 96,
+				width = 80,
+				height = 80,
 				fit = "contain",
-				opacity = 0.35,
+				opacity = isNearby and 0.75 or 0.35,
 			}),
 			ui.label({
-				text = noctalia.tr("widget.not_connected"),
+				text = isNearby and (noctalia.tr("panel.nearby_detected") or "Nearby (Fast Pair detected)") or noctalia.tr("widget.not_connected"),
 				fontSize = 15,
 				fontWeight = "bold",
-				color = "on_surface",
+				color = isNearby and "secondary" or "on_surface",
 				textAlign = "center",
 			}),
 			ui.label({
-				text = noctalia.tr("panel.guidance"),
+				text = isNearby and ((snapshot.device_name or "Pixel Buds Pro") .. rssiText .. " • Available to connect") or noctalia.tr("panel.guidance"),
 				fontSize = 12,
 				color = "on_surface_variant",
 				textAlign = "center",
 			}),
-		}))
+		}
+
+		if isNearby then
+			table.insert(notConnChildren, ui.button({
+				text = noctalia.tr("panel.connect_button") or "Connect Earbuds",
+				glyph = "bluetooth",
+				variant = "primary",
+				controlSize = "md",
+				onClick = function()
+					sendCommand("connect-device", nil)
+				end,
+			}))
+		end
+
+		table.insert(body, ui.column({ align = "center", gap = 12, padding = 20 }, notConnChildren))
 	end
 
 	local titleText = snapshot.device_name or snapshot.model_name or noctalia.tr("panel.title")
-	local statusText = connected and noctalia.tr("panel.status.connected") or noctalia.tr("panel.status.disconnected")
-	if connected and snapshot.mac then
-		statusText = statusText .. " • " .. snapshot.mac
+	local statusText
+	if connected then
+		statusText = noctalia.tr("panel.status.connected")
+		if snapshot.mac then
+			statusText = statusText .. " • " .. snapshot.mac
+		end
+	elseif snapshot.nearby then
+		statusText = (noctalia.tr("panel.nearby_detected") or "Nearby") .. (snapshot.rssi and string.format(" (%d dBm)", snapshot.rssi) or "")
+	else
+		statusText = noctalia.tr("panel.status.disconnected")
+		if snapshot.mac then
+			statusText = statusText .. " • " .. snapshot.mac
+		end
 	end
 
 

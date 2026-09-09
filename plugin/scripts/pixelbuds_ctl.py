@@ -135,9 +135,23 @@ def get_status(force=False):
     # 1. Fast path: check persistent connection daemon
     d_stat = try_daemon_cmd("status", timeout=1.0)
     if d_stat and d_stat.get("status") == "ok":
-        if not d_stat.get("connected"):
-            return {"connected": False, "error": "Not connected"}
         dev = d_stat.get("device") or {}
+        presence = d_stat.get("presence") or {}
+        cfg = d_stat.get("config") or {}
+
+        if not d_stat.get("connected"):
+            return {
+                "connected": False,
+                "error": "Not connected",
+                "mac": dev.get("mac") or "",
+                "device_name": dev.get("name") or "Pixel Buds Pro",
+                "nearby": presence.get("nearby", False),
+                "rssi": presence.get("rssi"),
+                "fast_pair_available": presence.get("fast_pair_available", False),
+                "fast_pair_scan": cfg.get("fast_pair_scan", True),
+                "scan_interval_secs": cfg.get("scan_interval_secs", 10),
+            }
+
         bat = d_stat.get("battery") or {}
         place = d_stat.get("placement") or {}
         anc = d_stat.get("anc") or {}
@@ -171,6 +185,11 @@ def get_status(force=False):
             "gesture_right": g_right,
             "gesture_control": g_left,
             "hold_anc": g_left == "anc",
+            "nearby": presence.get("nearby", True),
+            "rssi": presence.get("rssi"),
+            "fast_pair_available": presence.get("fast_pair_available", True),
+            "fast_pair_scan": cfg.get("fast_pair_scan", True),
+            "scan_interval_secs": cfg.get("scan_interval_secs", 10),
             "_timestamp": d_stat.get("timestamp", time.time()),
         }
         try:
@@ -519,6 +538,30 @@ def toggle_gesture_control():
     next_action = "anc" if curr != "anc" else "assistant"
     return set_gesture_control(next_action)
 
+def get_config():
+    d_res = try_daemon_cmd("get-config")
+    if d_res and d_res.get("status") == "ok":
+        return d_res.get("config", {})
+    return {"fast_pair_scan": True, "scan_interval_secs": 10}
+
+def set_config(key, value):
+    d_res = try_daemon_cmd(f"set-config {key} {value}")
+    if d_res and d_res.get("status") == "ok":
+        return d_res
+    return {"status": "error", "message": "Daemon not running"}
+
+def connect_device(mac=None):
+    if not mac:
+        target_mac, _ = find_device()
+        mac = target_mac
+    if not mac:
+        return {"status": "error", "message": "No MAC address found"}
+    try:
+        proc = subprocess.run(["bluetoothctl", "connect", mac], capture_output=True, text=True, timeout=10)
+        return {"status": "ok" if proc.returncode == 0 else "error", "output": proc.stdout}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
     if cmd == "status":
@@ -552,6 +595,15 @@ def main():
             print(json.dumps(set_gesture_control(act, side="both")))
     elif cmd == "toggle-gesture":
         print(json.dumps(toggle_gesture_control()))
+    elif cmd == "get-config":
+        print(json.dumps(get_config()))
+    elif cmd == "set-config":
+        key = sys.argv[2] if len(sys.argv) > 2 else "fast-pair-scan"
+        val = sys.argv[3] if len(sys.argv) > 3 else "true"
+        print(json.dumps(set_config(key, val)))
+    elif cmd == "connect":
+        mac = sys.argv[2] if len(sys.argv) > 2 else None
+        print(json.dumps(connect_device(mac=mac)))
     else:
         print(json.dumps({"error": f"Unknown command: {cmd}"}))
 
