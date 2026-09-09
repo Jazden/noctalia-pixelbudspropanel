@@ -42,6 +42,8 @@
     "gesture_control_desc": "Customize touch & hold actions for each earbud",
     "left_hold": "Left Earbud Hold",
     "right_hold": "Right Earbud Hold",
+    "left_col": "Left",
+    "right_col": "Right",
     "gesture_anc": "Noise Control (ANC)",
     "gesture_assistant": "Google Assistant"
   },

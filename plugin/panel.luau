@@ -356,66 +356,106 @@ local function render()
 					ui.label({ text = noctalia.tr("panel.gesture_control_desc"), fontSize = 11, color = "on_surface_variant" }),
 				}),
 
-				-- Left Earbud Radio Control
-				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-					ui.row({ align = "center", gap = 5 }, {
-						ui.glyph({ name = "ear", size = 14, color = "on_surface_variant" }),
-						ui.label({ text = noctalia.tr("panel.left_hold"), fontSize = 12, color = "on_surface" }),
-					}),
-					ui.row({ align = "center", gap = 4 }, {
-						ui.button({
-							controlSize = "sm",
-							variant = (leftGesture == "anc") and "secondary" or "ghost",
-							glyph = (leftGesture == "anc") and "circle-dot" or "circle",
-							text = noctalia.tr("panel.gesture_anc"),
-							onClick = function()
-								snapshot.gesture_left = "anc"
-								render()
-								sendCommand("set-gesture-side", { side = "left", action = "anc" })
-							end,
-						}),
-						ui.button({
-							controlSize = "sm",
-							variant = (leftGesture == "assistant") and "secondary" or "ghost",
-							glyph = (leftGesture == "assistant") and "circle-dot" or "circle",
-							text = noctalia.tr("panel.gesture_assistant"),
-							onClick = function()
-								snapshot.gesture_left = "assistant"
-								render()
-								sendCommand("set-gesture-side", { side = "left", action = "assistant" })
-							end,
+				-- Gesture Table (ANC / Assistant rows x Left / Right columns)
+				ui.column({ gap = 6 }, {
+					-- Column Headers
+					ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
+						ui.spacer(),
+						ui.row({ align = "center", gap = 8 }, {
+							ui.row({ width = 36, justify = "center", align = "center" }, {
+								ui.label({
+									text = noctalia.tr("panel.left_col") or "Left",
+									fontSize = 11,
+									fontWeight = "bold",
+									color = "on_surface_variant",
+									textAlign = "center",
+								}),
+							}),
+							ui.row({ width = 36, justify = "center", align = "center" }, {
+								ui.label({
+									text = noctalia.tr("panel.right_col") or "Right",
+									fontSize = 11,
+									fontWeight = "bold",
+									color = "on_surface_variant",
+									textAlign = "center",
+								}),
+							}),
 						}),
 					}),
-				}),
 
-				-- Right Earbud Radio Control
-				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-					ui.row({ align = "center", gap = 5 }, {
-						ui.glyph({ name = "ear", size = 14, color = "on_surface_variant" }),
-						ui.label({ text = noctalia.tr("panel.right_hold"), fontSize = 12, color = "on_surface" }),
-					}),
-					ui.row({ align = "center", gap = 4 }, {
-						ui.button({
-							controlSize = "sm",
-							variant = (rightGesture == "anc") and "secondary" or "ghost",
-							glyph = (rightGesture == "anc") and "circle-dot" or "circle",
-							text = noctalia.tr("panel.gesture_anc"),
-							onClick = function()
-								snapshot.gesture_right = "anc"
-								render()
-								sendCommand("set-gesture-side", { side = "right", action = "anc" })
-							end,
+					-- Row 1: Noise Control (ANC)
+					ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
+						ui.row({ align = "center", gap = 8, flexGrow = 1 }, {
+							ui.glyph({ name = "volume", size = 15, color = "on_surface_variant" }),
+							ui.label({ text = noctalia.tr("panel.gesture_anc"), fontSize = 12, color = "on_surface" }),
 						}),
-						ui.button({
-							controlSize = "sm",
-							variant = (rightGesture == "assistant") and "secondary" or "ghost",
-							glyph = (rightGesture == "assistant") and "circle-dot" or "circle",
-							text = noctalia.tr("panel.gesture_assistant"),
-							onClick = function()
-								snapshot.gesture_right = "assistant"
-								render()
-								sendCommand("set-gesture-side", { side = "right", action = "assistant" })
-							end,
+						ui.row({ align = "center", gap = 8 }, {
+							ui.row({ width = 36, justify = "center", align = "center" }, {
+								ui.button({
+									controlSize = "sm",
+									width = 36,
+									variant = (leftGesture == "anc") and "secondary" or "ghost",
+									glyph = (leftGesture == "anc") and "circle-dot" or "circle",
+									tooltip = "Left: " .. (noctalia.tr("panel.gesture_anc") or "Noise Control"),
+									onClick = function()
+										snapshot.gesture_left = "anc"
+										render()
+										sendCommand("set-gesture-side", { side = "left", action = "anc" })
+									end,
+								}),
+							}),
+							ui.row({ width = 36, justify = "center", align = "center" }, {
+								ui.button({
+									controlSize = "sm",
+									width = 36,
+									variant = (rightGesture == "anc") and "secondary" or "ghost",
+									glyph = (rightGesture == "anc") and "circle-dot" or "circle",
+									tooltip = "Right: " .. (noctalia.tr("panel.gesture_anc") or "Noise Control"),
+									onClick = function()
+										snapshot.gesture_right = "anc"
+										render()
+										sendCommand("set-gesture-side", { side = "right", action = "anc" })
+									end,
+								}),
+							}),
+						}),
+					}),
+
+					-- Row 2: Google Assistant
+					ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
+						ui.row({ align = "center", gap = 8, flexGrow = 1 }, {
+							ui.glyph({ name = "sparkles", size = 15, color = "on_surface_variant" }),
+							ui.label({ text = noctalia.tr("panel.gesture_assistant"), fontSize = 12, color = "on_surface" }),
+						}),
+						ui.row({ align = "center", gap = 8 }, {
+							ui.row({ width = 36, justify = "center", align = "center" }, {
+								ui.button({
+									controlSize = "sm",
+									width = 36,
+									variant = (leftGesture == "assistant") and "secondary" or "ghost",
+									glyph = (leftGesture == "assistant") and "circle-dot" or "circle",
+									tooltip = "Left: " .. (noctalia.tr("panel.gesture_assistant") or "Google Assistant"),
+									onClick = function()
+										snapshot.gesture_left = "assistant"
+										render()
+										sendCommand("set-gesture-side", { side = "left", action = "assistant" })
+									end,
+								}),
+							}),
+							ui.row({ width = 36, justify = "center", align = "center" }, {
+								ui.button({
+									controlSize = "sm",
+									width = 36,
+									variant = (rightGesture == "assistant") and "secondary" or "ghost",
+									glyph = (rightGesture == "assistant") and "circle-dot" or "circle",
+									tooltip = "Right: " .. (noctalia.tr("panel.gesture_assistant") or "Google Assistant"),
+									onClick = function()
+										snapshot.gesture_right = "assistant"
+										render()
+										sendCommand("set-gesture-side", { side = "right", action = "assistant" })
+									end,
+								}),
+							}),
 						}),
 					}),
 				}),
@@ -490,7 +530,7 @@ panel.render(ui.column({ flexGrow = 1, gap = 8, padding = 12 }, {
 				onClick = "onCloseClicked",
 			}),
 		}),
-		ui.column({ flexGrow = 1, gap = 8 }, body),
+		ui.scroll({ flexGrow = 1, gap = 8 }, body),
 	}))
 end
 
