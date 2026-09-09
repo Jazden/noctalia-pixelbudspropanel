@@ -246,7 +246,22 @@ def set_anc(mode):
         return {"status": "error", "error": err or "Failed to set ANC"}
 
 def cycle_anc():
-    curr = get_status().get("noise_mode", "off")
+    curr = None
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r") as f:
+                data = json.load(f)
+            curr = data.get("noise_mode")
+        except Exception:
+            pass
+    if not curr:
+        mac, _ = find_device()
+        if not mac:
+            return {"error": "Not connected"}
+        code, out, _ = run_pbpctrl(["get", "anc"], mac)
+        if code == 0 and out:
+            curr = out.lower().strip()
+
     # Cycle: active (ANC) -> aware (transparency) -> off -> active
     if curr == "active":
         next_mode = "aware"
@@ -312,7 +327,22 @@ def set_gesture_control(action):
     return {"status": "error", "error": err}
 
 def toggle_gesture_control():
-    curr = get_status().get("gesture_control", "assistant")
+    curr = None
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r") as f:
+                data = json.load(f)
+            curr = data.get("gesture_control")
+        except Exception:
+            pass
+    if not curr:
+        mac, _ = find_device()
+        if not mac:
+            return {"error": "Not connected"}
+        code, out, _ = run_pbpctrl(["get", "gesture-control"], mac)
+        if code == 0 and out:
+            curr = "anc" if "anc" in out.lower() else "assistant"
+
     next_action = "anc" if curr != "anc" else "assistant"
     return set_gesture_control(next_action)
 

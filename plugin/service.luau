@@ -61,18 +61,24 @@ local function pollStatus(force)
 end
 
 local function notifyMode(mode)
-	local modeKey = "panel.mode." .. mode
-	local modeLabel = noctalia.tr(modeKey)
+	local modeKey = "panel.mode." .. tostring(mode)
+	local modeLabel = noctalia.tr(modeKey) or tostring(mode)
 	local curState = noctalia.state.get(SNAPSHOT_KEY)
 	local devName = (curState and (curState.device_name or curState.model_name)) or "Pixel Buds Pro"
-	noctalia.notify(devName, string.format(noctalia.tr("notify.mode_changed"), modeLabel), "headphones")
+	local fmt = noctalia.tr("notify.mode_changed") or "Noise Control: %s"
+	pcall(function()
+		noctalia.notify(devName, string.format(fmt, modeLabel), "headphones")
+	end)
 end
 
 local function notifyGesture(action)
 	local label = (action == "anc") and (noctalia.tr("panel.gesture_anc") or "Noise Cancellation") or (noctalia.tr("panel.gesture_assistant") or "Assistant")
 	local curState = noctalia.state.get(SNAPSHOT_KEY)
 	local devName = (curState and (curState.device_name or curState.model_name)) or "Pixel Buds Pro"
-	noctalia.notify(devName, string.format(noctalia.tr("notify.gesture_changed") or "Hold Gesture: %s", label), "headphones")
+	local fmt = noctalia.tr("notify.gesture_changed") or "Hold Gesture: %s"
+	pcall(function()
+		noctalia.notify(devName, string.format(fmt, label), "headphones")
+	end)
 end
 
 local eqRunning = false
