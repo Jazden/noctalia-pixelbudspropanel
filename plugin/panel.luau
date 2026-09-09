@@ -149,6 +149,8 @@ local function render()
 					variant = (currentMode == "active" or currentMode == "anc") and "primary" or "ghost",
 					selected = (currentMode == "active" or currentMode == "anc"),
 					onClick = function()
+						snapshot.noise_mode = "active"
+						render()
 						sendCommand("set-noise", "active")
 					end,
 				}),
@@ -160,6 +162,8 @@ local function render()
 					variant = (currentMode == "aware" or currentMode == "transparency") and "secondary" or "ghost",
 					selected = (currentMode == "aware" or currentMode == "transparency"),
 					onClick = function()
+						snapshot.noise_mode = "aware"
+						render()
 						sendCommand("set-noise", "aware")
 					end,
 				}),
@@ -171,6 +175,8 @@ local function render()
 					variant = (currentMode == "off") and "outline" or "ghost",
 					selected = (currentMode == "off"),
 					onClick = function()
+						snapshot.noise_mode = "off"
+						render()
 						sendCommand("set-noise", "off")
 					end,
 				}),
