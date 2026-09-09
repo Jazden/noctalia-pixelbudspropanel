@@ -24,60 +24,69 @@ if [ -z "$DEVICE" ]; then
     exit 1
 fi
 
+LOCK="${XDG_RUNTIME_DIR:-/tmp}/pixelbuds_pbpctrl.lock"
+run_pbp() {
+    if command -v flock >/dev/null 2>&1; then
+        flock -w 6 "$LOCK" "$BIN" -d "$DEVICE" "$@"
+    else
+        "$BIN" -d "$DEVICE" "$@"
+    fi
+}
+
 case "$1" in
     battery|bat)
         if [ -x "$GFPS" ]; then
             "$GFPS" "$DEVICE"
         else
-            "$BIN" -d "$DEVICE" show battery
+            run_pbp show battery
         fi
         ;;
     anc)
         if [ -z "$2" ]; then
             echo "Current ANC state:"
-            "$BIN" -d "$DEVICE" get anc
+            run_pbp get anc
             echo "ANC Gesture Loop:"
-            "$BIN" -d "$DEVICE" get anc-gesture-loop
+            run_pbp get anc-gesture-loop
         else
-            "$BIN" -d "$DEVICE" set anc "$2"
+            run_pbp set anc "$2"
         fi
         ;;
     eq)
         if [ -z "$2" ]; then
-            "$BIN" -d "$DEVICE" get eq
+            run_pbp get eq
         else
-            "$BIN" -d "$DEVICE" set eq "$2" "$3" "$4" "$5" "$6"
+            run_pbp set eq "$2" "$3" "$4" "$5" "$6"
         fi
         ;;
     gesture|hold)
         if [ -z "$2" ]; then
             echo "Current Hold Gesture action:"
-            "$BIN" -d "$DEVICE" get gesture-control
+            run_pbp get gesture-control
         else
             act="$2"
             if [ "$act" = "toggle" ]; then
-                curr="$("$BIN" -d "$DEVICE" get gesture-control | tr '[:upper:]' '[:lower:]')"
+                curr="$(run_pbp get gesture-control | tr '[:upper:]' '[:lower:]')"
                 if [[ "$curr" == *"anc"* ]]; then
                     act="assistant"
                 else
                     act="anc"
                 fi
             fi
-            "$BIN" -d "$DEVICE" set gesture-control "$act" "$act"
+            run_pbp set gesture-control "$act" "$act"
             echo "Hold Gesture set to: $act"
         fi
         ;;
     info|status)
         echo "=== Hardware ==="
-        "$BIN" -d "$DEVICE" show hardware
+        run_pbp show hardware
         echo ""
         echo "=== Software ==="
-        "$BIN" -d "$DEVICE" show software
+        run_pbp show software
         echo ""
         echo "=== Runtime & Battery ==="
-        "$BIN" -d "$DEVICE" show runtime
+        run_pbp show runtime
         ;;
     *)
-        "$BIN" -d "$DEVICE" "$@"
+        run_pbp "$@"
         ;;
 esac
