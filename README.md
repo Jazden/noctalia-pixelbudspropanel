@@ -51,8 +51,8 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/Jazden/pixel-buds-pro-panel.git
-cd pixel-buds-pro-panel
+git clone https://github.com/Jazden/noctalia-pixelbudspropanel.git
+cd noctalia-pixelbudspropanel
 ```
 
 ### 2. Install the Noctalia Plugin
