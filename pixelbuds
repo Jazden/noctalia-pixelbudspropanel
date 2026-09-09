@@ -24,7 +24,10 @@ if [ -z "$DEVICE" ]; then
     exit 1
 fi
 
-LOCK="${XDG_RUNTIME_DIR:-/tmp}/pixelbuds_pbpctrl.lock"
+LOCK_DIR="${XDG_RUNTIME_DIR:-/tmp/pixelbuds_$(id -u)}"
+mkdir -p "$LOCK_DIR"
+chmod 700 "$LOCK_DIR" 2>/dev/null || true
+LOCK="$LOCK_DIR/pixelbuds_pbpctrl.lock"
 run_pbp() {
     if command -v flock >/dev/null 2>&1; then
         flock -w 6 "$LOCK" "$BIN" -d "$DEVICE" "$@"

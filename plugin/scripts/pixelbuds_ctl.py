@@ -9,8 +9,22 @@ import re
 import fcntl
 import shutil
 
-RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/pixelbuds_{os.getuid()}"
-os.makedirs(RUNTIME_DIR, exist_ok=True)
+xdg_runtime = os.environ.get("XDG_RUNTIME_DIR")
+if xdg_runtime and os.path.isdir(xdg_runtime):
+    RUNTIME_DIR = xdg_runtime
+else:
+    RUNTIME_DIR = f"/tmp/pixelbuds_{os.getuid()}"
+    if os.path.islink(RUNTIME_DIR):
+        try:
+            os.unlink(RUNTIME_DIR)
+        except OSError:
+            pass
+    os.makedirs(RUNTIME_DIR, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(RUNTIME_DIR, 0o700)
+    except OSError:
+        pass
+
 CACHE_FILE = os.path.join(RUNTIME_DIR, "pixelbuds_state.json")
 LOCK_FILE = os.path.join(RUNTIME_DIR, "pixelbuds_pbpctrl.lock")
 CACHE_TTL = 2.5 # seconds
@@ -18,7 +32,9 @@ CACHE_TTL = 2.5 # seconds
 def find_device():
     env_mac = os.environ.get("PIXELBUDS_MAC")
     if env_mac:
-        return env_mac.strip(), "Pixel Buds Pro"
+        clean_mac = env_mac.strip()
+        if re.match(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", clean_mac):
+            return clean_mac, "Pixel Buds Pro"
     try:
         out = subprocess.check_output(["bluetoothctl", "devices", "Connected"], text=True, stderr=subprocess.DEVNULL)
         for line in out.strip().split("\n"):
@@ -299,11 +315,14 @@ def main():
     elif cmd == "cycle-anc":
         print(json.dumps(cycle_anc()))
     elif cmd == "set-eq":
-        bands = [float(x) for x in sys.argv[2:7]]
-        if len(bands) == 5:
-            print(json.dumps(set_eq(bands)))
-        else:
-            print(json.dumps({"error": "Need 5 bands"}))
+        try:
+            bands = [max(-6.0, min(6.0, float(x))) for x in sys.argv[2:7]]
+            if len(bands) == 5:
+                print(json.dumps(set_eq(bands)))
+            else:
+                print(json.dumps({"error": "Need 5 bands"}))
+        except (ValueError, IndexError):
+            print(json.dumps({"error": "Invalid band numbers; must be 5 numeric dB values"}))
     elif cmd == "set-ohd":
         print(json.dumps(set_ohd(sys.argv[2] if len(sys.argv) > 2 else "true")))
     elif cmd == "set-speech-detection":

@@ -24,8 +24,20 @@ local function sanitizeBool(val)
 	return "false"
 end
 
-local function getCliCmd(args)
-	return 'python3 "' .. scriptPath .. '" ' .. args
+local function safeArg(val)
+	local s = tostring(val)
+	if string.match(s, "^[%w%.%-%+]+$") then
+		return s
+	end
+	return "'" .. string.gsub(s, "'", "'\\''") .. "'"
+end
+
+local function getCliCmd(...)
+	local parts = { "python3", '"' .. scriptPath .. '"' }
+	for _, a in ipairs({ ... }) do
+		table.insert(parts, safeArg(a))
+	end
+	return table.concat(parts, " ")
 end
 
 local function updateSnapshot(data)
@@ -35,8 +47,7 @@ local function updateSnapshot(data)
 end
 
 local function pollStatus(force)
-	local flag = force and " --force" or ""
-	local cmd = getCliCmd("status" .. flag)
+	local cmd = force and getCliCmd("status", "--force") or getCliCmd("status")
 	noctalia.runAsync(cmd, function(result)
 		if result and result.stdout and result.stdout ~= "" then
 			local ok, parsed = pcall(function()
@@ -64,6 +75,29 @@ local function notifyGesture(action)
 	noctalia.notify(devName, string.format(noctalia.tr("notify.gesture_changed") or "Hold Gesture: %s", label), "headphones")
 end
 
+local eqRunning = false
+local pendingEqArgs = nil
+
+local function dispatchEq(b1, b2, b3, b4, b5)
+	local args = { b1, b2, b3, b4, b5 }
+	if eqRunning then
+		pendingEqArgs = args
+		return
+	end
+	eqRunning = true
+	local cmd = getCliCmd("set-eq", args[1], args[2], args[3], args[4], args[5])
+	noctalia.runAsync(cmd, function(result)
+		eqRunning = false
+		if pendingEqArgs then
+			local nextArgs = pendingEqArgs
+			pendingEqArgs = nil
+			dispatchEq(nextArgs[1], nextArgs[2], nextArgs[3], nextArgs[4], nextArgs[5])
+		else
+			pollStatus(true)
+		end
+	end)
+end
+
 local function executeCommand(cmdObj)
 	if type(cmdObj) ~= "table" or not cmdObj.action then
 		return
@@ -72,7 +106,7 @@ local function executeCommand(cmdObj)
 	if cmdObj.action == "set-noise" and cmdObj.value then
 		local mode = sanitizeWord(tostring(cmdObj.value))
 		if mode then
-			local cmd = getCliCmd("set-anc " .. mode)
+			local cmd = getCliCmd("set-anc", mode)
 			noctalia.runAsync(cmd, function(result)
 				if result and result.stdout then
 					local ok, parsed = pcall(function() return noctalia.json.decode(result.stdout) end)
@@ -96,24 +130,25 @@ local function executeCommand(cmdObj)
 		end)
 	elseif cmdObj.action == "set-eq" and type(cmdObj.value) == "table" then
 		local bands = cmdObj.value
-		local args = string.format("%.1f %.1f %.1f %.1f %.1f", tonumber(bands[1]) or 0, tonumber(bands[2]) or 0, tonumber(bands[3]) or 0, tonumber(bands[4]) or 0, tonumber(bands[5]) or 0)
-		local cmd = getCliCmd("set-eq " .. args)
-		noctalia.runAsync(cmd, function(result)
-			pollStatus(true)
-		end)
+		local b1 = string.format("%.1f", math.max(-6.0, math.min(6.0, tonumber(bands[1]) or 0)))
+		local b2 = string.format("%.1f", math.max(-6.0, math.min(6.0, tonumber(bands[2]) or 0)))
+		local b3 = string.format("%.1f", math.max(-6.0, math.min(6.0, tonumber(bands[3]) or 0)))
+		local b4 = string.format("%.1f", math.max(-6.0, math.min(6.0, tonumber(bands[4]) or 0)))
+		local b5 = string.format("%.1f", math.max(-6.0, math.min(6.0, tonumber(bands[5]) or 0)))
+		dispatchEq(b1, b2, b3, b4, b5)
 	elseif cmdObj.action == "set-ohd" then
-		local cmd = getCliCmd("set-ohd " .. sanitizeBool(cmdObj.value))
+		local cmd = getCliCmd("set-ohd", sanitizeBool(cmdObj.value))
 		noctalia.runAsync(cmd, function(result)
 			pollStatus(true)
 		end)
 	elseif cmdObj.action == "set-speech-detection" then
-		local cmd = getCliCmd("set-speech-detection " .. sanitizeBool(cmdObj.value))
+		local cmd = getCliCmd("set-speech-detection", sanitizeBool(cmdObj.value))
 		noctalia.runAsync(cmd, function(result)
 			pollStatus(true)
 		end)
 	elseif cmdObj.action == "set-gesture-control" then
 		local target = (cmdObj.value == "anc" or cmdObj.value == true or cmdObj.value == "true") and "anc" or "assistant"
-		local cmd = getCliCmd("set-gesture " .. target)
+		local cmd = getCliCmd("set-gesture", target)
 		noctalia.runAsync(cmd, function(result)
 			if result and result.stdout then
 				local ok, parsed = pcall(function() return noctalia.json.decode(result.stdout) end)
@@ -154,7 +189,7 @@ function onIpc(event, payload)
 	elseif event == "set-noise" and payload then
 		local mode = sanitizeWord(tostring(payload))
 		if mode then
-			local cmd = getCliCmd("set-anc " .. mode)
+			local cmd = getCliCmd("set-anc", mode)
 			noctalia.runAsync(cmd, function(result)
 				if result and result.stdout then
 					local ok, parsed = pcall(function() return noctalia.json.decode(result.stdout) end)
@@ -178,7 +213,7 @@ function onIpc(event, payload)
 		end)
 	elseif event == "set-gesture" and payload then
 		local target = (payload == "anc" or payload == true or payload == "true") and "anc" or "assistant"
-		local cmd = getCliCmd("set-gesture " .. target)
+		local cmd = getCliCmd("set-gesture", target)
 		noctalia.runAsync(cmd, function(result)
 			if result and result.stdout then
 				local ok, parsed = pcall(function() return noctalia.json.decode(result.stdout) end)
@@ -195,9 +230,9 @@ end
 
 noctalia.state.watch(COMMAND_KEY, executeCommand)
 
--- Initial fast poll, then interval polling every 4 seconds
+-- Initial poll, then interval polling every 15 seconds
 pollStatus(false)
-noctalia.setUpdateInterval(7000)
+noctalia.setUpdateInterval(15000)
 
 function update()
 	pollStatus(false)
