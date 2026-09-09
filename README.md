@@ -12,6 +12,7 @@ Features a native top-bar widget, a floating popup control panel, standalone CLI
   * Live noise cancellation glyph (`shield-check` for ANC, `ear` for Transparency, `headphones` for Off).
   * Real-time earbud battery percentage.
   * Interactive tooltip showing Left Bud, Right Bud, and Case battery levels with charging indicators.
+  * **Fast Pair Presence Detection**: When the earbuds are disconnected (e.g. in case or connected to other devices via Bluetooth Multipoint) but nearby, the top-bar widget automatically appears displaying the headphones logo alongside the broadcast icon (`broadcast`), showing nearby signal strength in dBm.
   * **Left-Click**: Toggles the control panel.
   * **Right-Click**: Quickly cycles noise modes (`ANC` → `Transparency` → `Off`).
 
@@ -19,7 +20,13 @@ Features a native top-bar widget, a floating popup control panel, standalone CLI
   * Symmetrical 3-way battery meters for Left Bud, Case, and Right Bud.
   * Instant Active Noise Cancellation (ANC), Transparency, and Off mode buttons.
   * **Collapsible 5-Band Equalizer**: Expandable panel with sliders (-6.0 dB to +6.0 dB) for Low Bass, Bass, Mid, Treble, and Upper Treble with fixed table alignment.
-  * Feature toggles for **In-Ear Detection**, **Conversation Awareness**, and **Touch & Hold Action** (toggle press & hold between Active Noise Cancellation and Google Assistant).
+  * **Settings Accordion (Available Connected & Disconnected)**:
+    * **Fast Pair BLE Scanning**: Toggle background Fast Pair BLE discovery on or off in `pbpctrld`.
+    * **BLE Scan Interval**: Adjust scanning frequency (**5s**, **10s**, **15s**, **30s**) persisted to `~/.config/pbpctrl/config.json`.
+    * **Touch & Hold Controls**: Compact 2x2 radio table for Left and Right earbuds (Noise Control vs Google Assistant).
+    * **Hardware Toggles**: In-Ear Detection (pause on remove) and Conversation Awareness (auto-transparency).
+  * **Nearby Presence Card**: Disconnected state displays an advertisement badge with signal strength (RSSI in dBm) and a one-click **"Connect Earbuds"** button.
+  * **Auto-Scrolling**: Fully contained vertical scrolling prevents popups from overflowing smaller screen viewports when multiple sections are expanded.
 
 * **IPC & Scripting**:
   * Full IPC event support via `noctalia msg` for custom hotkeys, scripts, and window managers.
@@ -33,12 +40,18 @@ Features a native top-bar widget, a floating popup control panel, standalone CLI
 
 1. **Linux Bluetooth**: `bluez` with `bluetoothctl` running.
 2. **Python 3**: For the plugin backend bridge.
-3. **`pbpctrl`**: The reverse-engineered Pixel Buds Maestro RPC client.
-
-Install `pbpctrl` using Cargo:
-```bash
-cargo install --git https://github.com/qzed/pbpctrl.git
-```
+3. **Backend Client / Daemon**:
+   - **Recommended (`pbpctrld`)**: High-performance persistent connection daemon for near-instant (~20ms) controls and background Fast Pair BLE presence scanning:
+     ```bash
+     git clone https://github.com/Jazden/pbpctrld.git
+     cd pbpctrld && cargo build --release -p pbpctrld
+     cp target/release/pbpctrld ~/.cargo/bin/
+     systemctl --user enable --now pbpctrld
+     ```
+   - **Alternative (`pbpctrl`)**: Standard one-shot CLI client (the plugin automatically falls back to `pbpctrl` if `pbpctrld` is not installed):
+     ```bash
+     cargo install --git https://github.com/qzed/pbpctrl.git
+     ```
 
 Make sure Cargo's binary directory is in your `$PATH`:
 ```bash
@@ -151,6 +164,11 @@ A lightweight bash CLI wrapper is provided in the repository root for terminal w
 # Set Hold Gesture explicitly (anc or assistant)
 ./pixelbuds gesture anc
 ./pixelbuds gesture assistant
+
+# Fast Pair BLE Scanning Configuration (when using pbpctrld)
+./pixelbuds config get
+./pixelbuds config set fast-pair-scan true     # Enable or disable background scanning
+./pixelbuds config set scan-interval 15       # Set scan interval in seconds (5s, 10s, 15s, etc.)
 ```
 
 > [!NOTE]
