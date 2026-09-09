@@ -79,13 +79,21 @@ local function notifyMode(mode)
 	end)
 end
 
-local function notifyGesture(action)
+local function notifyGesture(action, side)
 	local label = (action == "anc") and (noctalia.tr("panel.gesture_anc") or "Noise Cancellation") or (noctalia.tr("panel.gesture_assistant") or "Assistant")
 	local curState = noctalia.state.get(SNAPSHOT_KEY)
 	local devName = (curState and (curState.device_name or curState.model_name)) or "Pixel Buds Pro"
-	local fmt = noctalia.tr("notify.gesture_changed") or "Hold Gesture: %s"
+	local msg
+	if side == "left" then
+		msg = string.format("Left Ear: %s", label)
+	elseif side == "right" then
+		msg = string.format("Right Ear: %s", label)
+	else
+		local fmt = noctalia.tr("notify.gesture_changed") or "Hold Gesture: %s"
+		msg = string.format(fmt, label)
+	end
 	pcall(function()
-		noctalia.notify(devName, string.format(fmt, label), "headphones")
+		noctalia.notify(devName, msg, "headphones")
 	end)
 end
 
@@ -165,13 +173,34 @@ local function executeCommand(cmdObj)
 				pollStatus(true)
 			end
 		end)
+	elseif cmdObj.action == "set-gesture-side" and type(cmdObj.value) == "table" then
+		local side = cmdObj.value.side or "left"
+		local target = (cmdObj.value.action == "anc" or cmdObj.value.action == true or cmdObj.value.action == "true") and "anc" or "assistant"
+		mutateSnapshot(function(s)
+			if side == "left" then
+				s.gesture_left = target
+			elseif side == "right" then
+				s.gesture_right = target
+			end
+			s.gesture_control = s.gesture_left or target
+			s.hold_anc = (s.gesture_control == "anc")
+		end)
+		notifyGesture(target, side)
+		local cmd = getCliCmd("set-gesture", side, target)
+		noctalia.runAsync(cmd, function(result)
+			if result and result.exitCode ~= 0 then
+				pollStatus(true)
+			end
+		end)
 	elseif cmdObj.action == "set-gesture-control" then
 		local target = (cmdObj.value == "anc" or cmdObj.value == true or cmdObj.value == "true") and "anc" or "assistant"
 		mutateSnapshot(function(s)
+			s.gesture_left = target
+			s.gesture_right = target
 			s.gesture_control = target
 			s.hold_anc = (target == "anc")
 		end)
-		notifyGesture(target)
+		notifyGesture(target, "both")
 		local cmd = getCliCmd("set-gesture", target)
 		noctalia.runAsync(cmd, function(result)
 			if result and result.exitCode ~= 0 then

@@ -148,6 +148,7 @@ def get_status(force=False):
         b_case = bat.get("case") or {}
 
         g_left = sets.get("gesture_left", "assistant")
+        g_right = sets.get("gesture_right", "assistant")
 
         res = {
             "connected": True,
@@ -166,6 +167,8 @@ def get_status(force=False):
             "eq": sets.get("eq", [0.0, 0.0, 0.0, 0.0, 0.0]),
             "ohd": sets.get("ohd", True),
             "speech_detection": sets.get("speech_detection", False),
+            "gesture_left": g_left,
+            "gesture_right": g_right,
             "gesture_control": g_left,
             "hold_anc": g_left == "anc",
             "_timestamp": d_stat.get("timestamp", time.time()),
@@ -276,7 +279,12 @@ def get_status(force=False):
 
         code, out, _ = run_pbpctrl(["get", "gesture-control"], mac)
         if code == 0 and out:
-            status["gesture_control"] = "anc" if "anc" in out.lower() else "assistant"
+            out_lower = out.lower()
+            m_left = re.search(r"left:\s*([a-zA-Z_-]+)", out_lower)
+            m_right = re.search(r"right:\s*([a-zA-Z_-]+)", out_lower)
+            status["gesture_left"] = "anc" if m_left and "anc" in m_left.group(1) else ("anc" if "anc" in out_lower else "assistant")
+            status["gesture_right"] = "anc" if m_right and "anc" in m_right.group(1) else ("anc" if "anc" in out_lower else "assistant")
+            status["gesture_control"] = status["gesture_left"]
             status["hold_anc"] = (status["gesture_control"] == "anc")
 
 
@@ -411,46 +419,84 @@ def set_speech_detection(val):
         return {"status": "ok", "speech_detection": v == "true"}
     return {"status": "error", "error": err}
 
-def set_gesture_control(action):
+def set_gesture_control(action, side=None):
     act_lower = str(action).lower().strip()
     if act_lower in ("anc", "noise_cancellation", "true", "1", "yes"):
         target = "anc"
     else:
         target = "assistant"
 
-    d_res = try_daemon_cmd(f"set-gesture-control {target} {target}")
+    side_norm = (side or "both").lower().strip()
+    if side_norm not in ("left", "right", "both", "all"):
+        side_norm = "both"
+
+    if side_norm in ("both", "all"):
+        d_res = try_daemon_cmd(f"set-gesture-control {target} {target}")
+    else:
+        d_res = try_daemon_cmd(f"set-gesture {side_norm} {target}")
+
     if d_res and d_res.get("status") == "ok":
         if os.path.exists(CACHE_FILE):
             try:
                 with open(CACHE_FILE, "r") as f:
                     data = json.load(f)
-                data["gesture_control"] = target
-                data["hold_anc"] = (target == "anc")
+                if side_norm in ("left", "both", "all"):
+                    data["gesture_left"] = target
+                if side_norm in ("right", "both", "all"):
+                    data["gesture_right"] = target
+                data["gesture_control"] = data.get("gesture_left", target)
+                data["hold_anc"] = (data["gesture_control"] == "anc")
                 data["_timestamp"] = time.time()
                 with open(CACHE_FILE, "w") as f:
                     json.dump(data, f)
             except Exception:
                 pass
-        return {"status": "ok", "gesture_control": target, "hold_anc": target == "anc"}
+        return {
+            "status": "ok",
+            "side": side_norm,
+            "gesture_left": d_res.get("left", target),
+            "gesture_right": d_res.get("right", target),
+        }
 
     mac, _ = find_device()
     if not mac:
         return {"error": "Not connected"}
 
-    code, _, err = run_pbpctrl(["set", "gesture-control", target, target], mac)
+    cached = {}
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r") as f:
+                cached = json.load(f)
+        except Exception:
+            pass
+
+    cur_left = cached.get("gesture_left", "assistant")
+    cur_right = cached.get("gesture_right", "assistant")
+
+    new_left = target if side_norm in ("left", "both", "all") else cur_left
+    new_right = target if side_norm in ("right", "both", "all") else cur_right
+
+    code, _, err = run_pbpctrl(["set", "gesture-control", new_left, new_right], mac)
     if code == 0:
         if os.path.exists(CACHE_FILE):
             try:
                 with open(CACHE_FILE, "r") as f:
                     data = json.load(f)
-                data["gesture_control"] = target
-                data["hold_anc"] = (target == "anc")
+                data["gesture_left"] = new_left
+                data["gesture_right"] = new_right
+                data["gesture_control"] = new_left
+                data["hold_anc"] = (new_left == "anc")
                 data["_timestamp"] = time.time()
                 with open(CACHE_FILE, "w") as f:
                     json.dump(data, f)
             except Exception:
                 pass
-        return {"status": "ok", "gesture_control": target, "hold_anc": target == "anc"}
+        return {
+            "status": "ok",
+            "side": side_norm,
+            "gesture_left": new_left,
+            "gesture_right": new_right,
+        }
     return {"status": "error", "error": err}
 
 def toggle_gesture_control():
@@ -497,8 +543,13 @@ def main():
     elif cmd == "set-speech-detection":
         print(json.dumps(set_speech_detection(sys.argv[2] if len(sys.argv) > 2 else "true")))
     elif cmd == "set-gesture":
-        act = sys.argv[2] if len(sys.argv) > 2 else "anc"
-        print(json.dumps(set_gesture_control(act)))
+        if len(sys.argv) > 3:
+            side = sys.argv[2]
+            act = sys.argv[3]
+            print(json.dumps(set_gesture_control(act, side=side)))
+        else:
+            act = sys.argv[2] if len(sys.argv) > 2 else "anc"
+            print(json.dumps(set_gesture_control(act, side="both")))
     elif cmd == "toggle-gesture":
         print(json.dumps(toggle_gesture_control()))
     else:

@@ -7,6 +7,7 @@ local COMMAND_KEY = "pixelbuds_command"
 
 local snapshot = noctalia.state.get(SNAPSHOT_KEY) or {}
 local eqExpanded = false
+local settingsExpanded = false
 
 local commandSeq = 0
 local function sendCommand(action, value)
@@ -277,61 +278,153 @@ local function render()
 
 		table.insert(body, ui.separator({ thickness = 1, color = "outline/0.2" }))
 
-		-- 4. Features Section (In-Ear Detection & Conversation Awareness)
-		table.insert(body, ui.column({ gap = 6 }, {
-			ui.label({
-				text = noctalia.tr("panel.features"),
-				fontSize = 11,
-				fontWeight = "bold",
-				color = "on_surface_variant",
-			}),
-			ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-				ui.column({ flexGrow = 1, gap = 1 }, {
-					ui.label({ text = noctalia.tr("panel.ohd"), fontSize = 13, color = "on_surface" }),
-					ui.label({ text = noctalia.tr("panel.ohd_desc"), fontSize = 11, color = "on_surface_variant" }),
-				}),
-				ui.toggle({
-					checked = snapshot.ohd == true,
-					onChange = function(v)
-						local enabled = (v == true or v == "true")
-						snapshot.ohd = enabled
-						sendCommand("set-ohd", enabled)
-						render()
-					end,
+		-- 4. Settings Section (Collapsible Dropdown with Independent Hold Radio Buttons)
+		local settingsHeader = ui.row({
+			align = "center",
+			justify = "space_between",
+			onClick = function()
+				settingsExpanded = not settingsExpanded
+				render()
+			end,
+		}, {
+			ui.row({ align = "center", gap = 6 }, {
+				ui.glyph({ name = "settings", size = 14, color = "on_surface_variant" }),
+				ui.label({
+					text = noctalia.tr("panel.settings_section") or "Settings",
+					fontSize = 11,
+					fontWeight = "bold",
+					color = "on_surface_variant",
 				}),
 			}),
-			ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-				ui.column({ flexGrow = 1, gap = 1 }, {
-					ui.label({ text = noctalia.tr("panel.speech_detection"), fontSize = 13, color = "on_surface" }),
-					ui.label({ text = noctalia.tr("panel.speech_detection_desc"), fontSize = 11, color = "on_surface_variant" }),
-				}),
-				ui.toggle({
-					checked = snapshot.speech_detection == true,
-					onChange = function(v)
-						local enabled = (v == true or v == "true")
-						snapshot.speech_detection = enabled
-						sendCommand("set-speech-detection", enabled)
-						render()
-					end,
-				}),
+			ui.button({
+				glyph = settingsExpanded and "chevron-up" or "chevron-down",
+				variant = "ghost",
+				controlSize = "sm",
+				onClick = function()
+					settingsExpanded = not settingsExpanded
+					render()
+				end,
 			}),
-			ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-				ui.column({ flexGrow = 1, gap = 1 }, {
-					ui.label({ text = noctalia.tr("panel.gesture_control"), fontSize = 13, color = "on_surface" }),
+		})
+
+		if settingsExpanded then
+			local leftGesture = snapshot.gesture_left or snapshot.gesture_control or "anc"
+			local rightGesture = snapshot.gesture_right or snapshot.gesture_control or "assistant"
+
+			table.insert(body, ui.column({ gap = 10 }, {
+				settingsHeader,
+
+				-- In-Ear Detection (OHD)
+				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+					ui.column({ flexGrow = 1, gap = 1 }, {
+						ui.label({ text = noctalia.tr("panel.ohd"), fontSize = 13, color = "on_surface" }),
+						ui.label({ text = noctalia.tr("panel.ohd_desc"), fontSize = 11, color = "on_surface_variant" }),
+					}),
+					ui.toggle({
+						checked = snapshot.ohd == true,
+						onChange = function(v)
+							local enabled = (v == true or v == "true")
+							snapshot.ohd = enabled
+							sendCommand("set-ohd", enabled)
+							render()
+						end,
+					}),
+				}),
+
+				-- Conversation Awareness
+				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+					ui.column({ flexGrow = 1, gap = 1 }, {
+						ui.label({ text = noctalia.tr("panel.speech_detection"), fontSize = 13, color = "on_surface" }),
+						ui.label({ text = noctalia.tr("panel.speech_detection_desc"), fontSize = 11, color = "on_surface_variant" }),
+					}),
+					ui.toggle({
+						checked = snapshot.speech_detection == true,
+						onChange = function(v)
+							local enabled = (v == true or v == "true")
+							snapshot.speech_detection = enabled
+							sendCommand("set-speech-detection", enabled)
+							render()
+						end,
+					}),
+				}),
+
+				ui.separator({ thickness = 1, color = "outline/0.15" }),
+
+				-- Touch & Hold Gesture Header
+				ui.column({ gap = 2 }, {
+					ui.label({ text = noctalia.tr("panel.gesture_control"), fontSize = 12, fontWeight = "bold", color = "on_surface" }),
 					ui.label({ text = noctalia.tr("panel.gesture_control_desc"), fontSize = 11, color = "on_surface_variant" }),
 				}),
-				ui.toggle({
-					checked = snapshot.hold_anc == true or snapshot.gesture_control == "anc",
-					onChange = function(v)
-						local enabled = (v == true or v == "true")
-						snapshot.hold_anc = enabled
-						snapshot.gesture_control = enabled and "anc" or "assistant"
-						sendCommand("set-gesture-control", enabled and "anc" or "assistant")
-						render()
-					end,
+
+				-- Left Earbud Radio Control
+				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+					ui.row({ align = "center", gap = 5 }, {
+						ui.glyph({ name = "ear", size = 14, color = "on_surface_variant" }),
+						ui.label({ text = noctalia.tr("panel.left_hold"), fontSize = 12, color = "on_surface" }),
+					}),
+					ui.row({ align = "center", gap = 4 }, {
+						ui.button({
+							controlSize = "sm",
+							variant = (leftGesture == "anc") and "secondary" or "ghost",
+							glyph = (leftGesture == "anc") and "circle-dot" or "circle",
+							text = noctalia.tr("panel.gesture_anc"),
+							onClick = function()
+								snapshot.gesture_left = "anc"
+								render()
+								sendCommand("set-gesture-side", { side = "left", action = "anc" })
+							end,
+						}),
+						ui.button({
+							controlSize = "sm",
+							variant = (leftGesture == "assistant") and "secondary" or "ghost",
+							glyph = (leftGesture == "assistant") and "circle-dot" or "circle",
+							text = noctalia.tr("panel.gesture_assistant"),
+							onClick = function()
+								snapshot.gesture_left = "assistant"
+								render()
+								sendCommand("set-gesture-side", { side = "left", action = "assistant" })
+							end,
+						}),
+					}),
 				}),
-			}),
-		}))
+
+				-- Right Earbud Radio Control
+				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+					ui.row({ align = "center", gap = 5 }, {
+						ui.glyph({ name = "ear", size = 14, color = "on_surface_variant" }),
+						ui.label({ text = noctalia.tr("panel.right_hold"), fontSize = 12, color = "on_surface" }),
+					}),
+					ui.row({ align = "center", gap = 4 }, {
+						ui.button({
+							controlSize = "sm",
+							variant = (rightGesture == "anc") and "secondary" or "ghost",
+							glyph = (rightGesture == "anc") and "circle-dot" or "circle",
+							text = noctalia.tr("panel.gesture_anc"),
+							onClick = function()
+								snapshot.gesture_right = "anc"
+								render()
+								sendCommand("set-gesture-side", { side = "right", action = "anc" })
+							end,
+						}),
+						ui.button({
+							controlSize = "sm",
+							variant = (rightGesture == "assistant") and "secondary" or "ghost",
+							glyph = (rightGesture == "assistant") and "circle-dot" or "circle",
+							text = noctalia.tr("panel.gesture_assistant"),
+							onClick = function()
+								snapshot.gesture_right = "assistant"
+								render()
+								sendCommand("set-gesture-side", { side = "right", action = "assistant" })
+							end,
+						}),
+					}),
+				}),
+			}))
+		else
+			table.insert(body, ui.column({ gap = 0 }, {
+				settingsHeader,
+			}))
+		end
 	else
 		-- Not connected state
 		table.insert(body, ui.column({ align = "center", gap = 12, padding = 24 }, {

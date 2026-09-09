@@ -32,15 +32,18 @@
       "treble": "Treble",
       "upper_treble": "Upper Treble"
     },
-    "features": "Features",
+    "features": "Settings",
+    "settings_section": "Settings",
     "ohd": "In-Ear Detection",
     "ohd_desc": "Pause audio automatically when removed",
     "speech_detection": "Conversation Awareness",
     "speech_detection_desc": "Pause audio and activate transparency when talking",
-    "gesture_control": "Hold for Noise Control",
-    "gesture_control_desc": "Toggle press & hold between ANC and Assistant",
-    "gesture_anc": "Noise Cancellation",
-    "gesture_assistant": "Assistant"
+    "gesture_control": "Touch & Hold Controls",
+    "gesture_control_desc": "Customize touch & hold actions for each earbud",
+    "left_hold": "Left Earbud Hold",
+    "right_hold": "Right Earbud Hold",
+    "gesture_anc": "Noise Control (ANC)",
+    "gesture_assistant": "Google Assistant"
   },
   "plugin": {
     "description": "Battery monitor, active noise cancellation (ANC), and 5-band equalizer control for Google Pixel Buds Pro",
