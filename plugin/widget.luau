@@ -70,7 +70,7 @@ local function render()
 
 	-- Build detailed tooltip rows
 	local tooltipRows = {
-		{ key = "Device", value = snapshot.model_name or snapshot.device_name or noctalia.tr("panel.title") },
+		{ key = "Device", value = snapshot.device_name or snapshot.model_name or noctalia.tr("panel.title") },
 		{ key = noctalia.tr("widget.mode"), value = getModeName(mode) },
 	}
 

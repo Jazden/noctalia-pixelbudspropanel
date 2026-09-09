@@ -34,7 +34,19 @@ def find_device():
     if env_mac:
         clean_mac = env_mac.strip()
         if re.match(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", clean_mac):
-            return clean_mac, "Pixel Buds Pro"
+            dev_name = "Pixel Buds Pro"
+            try:
+                info_out = subprocess.check_output(["bluetoothctl", "info", clean_mac], text=True, stderr=subprocess.DEVNULL)
+                for iline in info_out.split("\n"):
+                    iline = iline.strip()
+                    if iline.startswith("Alias: "):
+                        dev_name = iline.split("Alias: ", 1)[1].strip()
+                        break
+                    elif iline.startswith("Name: "):
+                        dev_name = iline.split("Name: ", 1)[1].strip()
+            except Exception:
+                pass
+            return clean_mac, dev_name
     try:
         out = subprocess.check_output(["bluetoothctl", "devices", "Connected"], text=True, stderr=subprocess.DEVNULL)
         for line in out.strip().split("\n"):

@@ -352,7 +352,7 @@ local function render()
 		}))
 	end
 
-	local titleText = snapshot.model_name or snapshot.device_name or noctalia.tr("panel.title")
+	local titleText = snapshot.device_name or snapshot.model_name or noctalia.tr("panel.title")
 	local statusText = connected and noctalia.tr("panel.status.connected") or noctalia.tr("panel.status.disconnected")
 	if connected and snapshot.mac then
 		statusText = statusText .. " • " .. snapshot.mac
