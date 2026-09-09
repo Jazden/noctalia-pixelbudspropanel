@@ -117,6 +117,264 @@ local function render()
 	local connected = snapshot.connected == true
 	local body = {}
 
+	local function buildSettingsSection(isConn)
+		local settingsHeader = ui.row({
+			align = "center",
+			justify = "space_between",
+			onClick = function()
+				settingsExpanded = not settingsExpanded
+				render()
+			end,
+		}, {
+			ui.row({ align = "center", gap = 6 }, {
+				ui.glyph({ name = "settings", size = 14, color = "on_surface_variant" }),
+				ui.label({
+					text = noctalia.tr("panel.settings_section") or "Settings",
+					fontSize = 11,
+					fontWeight = "bold",
+					color = "on_surface_variant",
+				}),
+			}),
+			ui.button({
+				glyph = settingsExpanded and "chevron-up" or "chevron-down",
+				variant = "ghost",
+				controlSize = "sm",
+				onClick = function()
+					settingsExpanded = not settingsExpanded
+					render()
+				end,
+			}),
+		})
+
+		if not settingsExpanded then
+			return ui.column({ gap = 0 }, {
+				settingsHeader,
+			})
+		end
+
+		local children = { settingsHeader }
+
+		if isConn then
+			local leftGesture = snapshot.gesture_left or snapshot.gesture_control or "anc"
+			local rightGesture = snapshot.gesture_right or snapshot.gesture_control or "assistant"
+
+			-- In-Ear Detection (OHD)
+			table.insert(children, ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+				ui.column({ flexGrow = 1, gap = 1 }, {
+					ui.label({ text = noctalia.tr("panel.ohd"), fontSize = 13, color = "on_surface" }),
+					ui.label({ text = noctalia.tr("panel.ohd_desc"), fontSize = 11, color = "on_surface_variant" }),
+				}),
+				ui.toggle({
+					checked = snapshot.ohd == true,
+					onChange = function(v)
+						local enabled = (v == true or v == "true")
+						snapshot.ohd = enabled
+						sendCommand("set-ohd", enabled)
+						render()
+					end,
+				}),
+			}))
+
+			-- Conversation Awareness
+			table.insert(children, ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+				ui.column({ flexGrow = 1, gap = 1 }, {
+					ui.label({ text = noctalia.tr("panel.speech_detection"), fontSize = 13, color = "on_surface" }),
+					ui.label({ text = noctalia.tr("panel.speech_detection_desc"), fontSize = 11, color = "on_surface_variant" }),
+				}),
+				ui.toggle({
+					checked = snapshot.speech_detection == true,
+					onChange = function(v)
+						local enabled = (v == true or v == "true")
+						snapshot.speech_detection = enabled
+						sendCommand("set-speech-detection", enabled)
+						render()
+					end,
+				}),
+			}))
+
+			table.insert(children, ui.separator({ thickness = 1, color = "outline/0.15" }))
+
+			-- Touch & Hold Gesture Header
+			table.insert(children, ui.column({ gap = 2 }, {
+				ui.label({ text = noctalia.tr("panel.gesture_control"), fontSize = 12, fontWeight = "bold", color = "on_surface" }),
+				ui.label({ text = noctalia.tr("panel.gesture_control_desc"), fontSize = 11, color = "on_surface_variant" }),
+			}))
+
+			-- Gesture Table (ANC / Assistant rows x Left / Right columns)
+			table.insert(children, ui.column({ gap = 6 }, {
+				-- Column Headers
+				ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
+					ui.spacer(),
+					ui.row({ align = "center", gap = 8 }, {
+						ui.row({ width = 36, justify = "center", align = "center" }, {
+							ui.label({
+								text = noctalia.tr("panel.left_col") or "Left",
+								fontSize = 11,
+								fontWeight = "bold",
+								color = "on_surface_variant",
+								textAlign = "center",
+							}),
+						}),
+						ui.row({ width = 36, justify = "center", align = "center" }, {
+							ui.label({
+								text = noctalia.tr("panel.right_col") or "Right",
+								fontSize = 11,
+								fontWeight = "bold",
+								color = "on_surface_variant",
+								textAlign = "center",
+							}),
+						}),
+					}),
+				}),
+
+				-- Row 1: Noise Control (ANC)
+				ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
+					ui.row({ align = "center", gap = 8, flexGrow = 1 }, {
+						ui.glyph({ name = "volume", size = 15, color = "on_surface_variant" }),
+						ui.label({ text = noctalia.tr("panel.gesture_anc"), fontSize = 12, color = "on_surface" }),
+					}),
+					ui.row({ align = "center", gap = 8 }, {
+						ui.row({ width = 36, justify = "center", align = "center" }, {
+							ui.button({
+								controlSize = "sm",
+								width = 36,
+								variant = (leftGesture == "anc") and "secondary" or "ghost",
+								glyph = (leftGesture == "anc") and "circle-dot" or "circle",
+								tooltip = "Left: " .. (noctalia.tr("panel.gesture_anc") or "Noise Control"),
+								onClick = function()
+									snapshot.gesture_left = "anc"
+									render()
+									sendCommand("set-gesture-side", { side = "left", action = "anc" })
+								end,
+							}),
+						}),
+						ui.row({ width = 36, justify = "center", align = "center" }, {
+							ui.button({
+								controlSize = "sm",
+								width = 36,
+								variant = (rightGesture == "anc") and "secondary" or "ghost",
+								glyph = (rightGesture == "anc") and "circle-dot" or "circle",
+								tooltip = "Right: " .. (noctalia.tr("panel.gesture_anc") or "Noise Control"),
+								onClick = function()
+									snapshot.gesture_right = "anc"
+									render()
+									sendCommand("set-gesture-side", { side = "right", action = "anc" })
+								end,
+							}),
+						}),
+					}),
+				}),
+
+				-- Row 2: Google Assistant
+				ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
+					ui.row({ align = "center", gap = 8, flexGrow = 1 }, {
+						ui.glyph({ name = "sparkles", size = 15, color = "on_surface_variant" }),
+						ui.label({ text = noctalia.tr("panel.gesture_assistant"), fontSize = 12, color = "on_surface" }),
+					}),
+					ui.row({ align = "center", gap = 8 }, {
+						ui.row({ width = 36, justify = "center", align = "center" }, {
+							ui.button({
+								controlSize = "sm",
+								width = 36,
+								variant = (leftGesture == "assistant") and "secondary" or "ghost",
+								glyph = (leftGesture == "assistant") and "circle-dot" or "circle",
+								tooltip = "Left: " .. (noctalia.tr("panel.gesture_assistant") or "Google Assistant"),
+								onClick = function()
+									snapshot.gesture_left = "assistant"
+									render()
+									sendCommand("set-gesture-side", { side = "left", action = "assistant" })
+								end,
+							}),
+						}),
+						ui.row({ width = 36, justify = "center", align = "center" }, {
+							ui.button({
+								controlSize = "sm",
+								width = 36,
+								variant = (rightGesture == "assistant") and "secondary" or "ghost",
+								glyph = (rightGesture == "assistant") and "circle-dot" or "circle",
+								tooltip = "Right: " .. (noctalia.tr("panel.gesture_assistant") or "Google Assistant"),
+								onClick = function()
+									snapshot.gesture_right = "assistant"
+									render()
+									sendCommand("set-gesture-side", { side = "right", action = "assistant" })
+								end,
+							}),
+						}),
+					}),
+				}),
+			}))
+
+			table.insert(children, ui.separator({ thickness = 1, color = "outline/0.15" }))
+		end
+
+		-- Fast Pair Scanning Toggle
+		table.insert(children, ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+			ui.column({ flexGrow = 1, gap = 1 }, {
+				ui.label({ text = noctalia.tr("panel.fast_pair_scan") or "Fast Pair BLE Scanning", fontSize = 13, color = "on_surface" }),
+				ui.label({ text = noctalia.tr("panel.fast_pair_scan_desc") or "Detect nearby presence and availability when disconnected", fontSize = 11, color = "on_surface_variant" }),
+			}),
+			ui.toggle({
+				checked = snapshot.fast_pair_scan ~= false,
+				onChange = function(v)
+					local enabled = (v == true or v == "true")
+					snapshot.fast_pair_scan = enabled
+					sendCommand("set-fast-pair-scan", enabled)
+					render()
+				end,
+			}),
+		}))
+
+		-- BLE Scan Interval Row
+		table.insert(children, ui.row({ align = "center", justify = "space_between", gap = 8 }, {
+			ui.label({ text = noctalia.tr("panel.scan_interval") or "BLE Scan Interval", fontSize = 12, color = "on_surface" }),
+			ui.row({ align = "center", gap = 4 }, {
+				ui.button({
+					controlSize = "sm",
+					variant = ((snapshot.scan_interval_secs or 10) == 5) and "secondary" or "ghost",
+					text = "5s",
+					onClick = function()
+						snapshot.scan_interval_secs = 5
+						render()
+						sendCommand("set-scan-interval", 5)
+					end,
+				}),
+				ui.button({
+					controlSize = "sm",
+					variant = ((snapshot.scan_interval_secs or 10) == 10) and "secondary" or "ghost",
+					text = "10s",
+					onClick = function()
+						snapshot.scan_interval_secs = 10
+						render()
+						sendCommand("set-scan-interval", 10)
+					end,
+				}),
+				ui.button({
+					controlSize = "sm",
+					variant = ((snapshot.scan_interval_secs or 10) == 15) and "secondary" or "ghost",
+					text = "15s",
+					onClick = function()
+						snapshot.scan_interval_secs = 15
+						render()
+						sendCommand("set-scan-interval", 15)
+					end,
+				}),
+				ui.button({
+					controlSize = "sm",
+					variant = ((snapshot.scan_interval_secs or 10) == 30) and "secondary" or "ghost",
+					text = "30s",
+					onClick = function()
+						snapshot.scan_interval_secs = 30
+						render()
+						sendCommand("set-scan-interval", 30)
+					end,
+				}),
+			}),
+		}))
+
+		return ui.column({ gap = 10 }, children)
+	end
+
+
 	if connected then
 		-- 1. 3-Column Battery Section (Left, Case, Right)
 		table.insert(body, ui.row({
@@ -278,259 +536,9 @@ local function render()
 
 		table.insert(body, ui.separator({ thickness = 1, color = "outline/0.2" }))
 
-		-- 4. Settings Section (Collapsible Dropdown with Independent Hold Radio Buttons)
-		local settingsHeader = ui.row({
-			align = "center",
-			justify = "space_between",
-			onClick = function()
-				settingsExpanded = not settingsExpanded
-				render()
-			end,
-		}, {
-			ui.row({ align = "center", gap = 6 }, {
-				ui.glyph({ name = "settings", size = 14, color = "on_surface_variant" }),
-				ui.label({
-					text = noctalia.tr("panel.settings_section") or "Settings",
-					fontSize = 11,
-					fontWeight = "bold",
-					color = "on_surface_variant",
-				}),
-			}),
-			ui.button({
-				glyph = settingsExpanded and "chevron-up" or "chevron-down",
-				variant = "ghost",
-				controlSize = "sm",
-				onClick = function()
-					settingsExpanded = not settingsExpanded
-					render()
-				end,
-			}),
-		})
+		-- 4. Settings Section
+		table.insert(body, buildSettingsSection(true))
 
-		if settingsExpanded then
-			local leftGesture = snapshot.gesture_left or snapshot.gesture_control or "anc"
-			local rightGesture = snapshot.gesture_right or snapshot.gesture_control or "assistant"
-
-			table.insert(body, ui.column({ gap = 10 }, {
-				settingsHeader,
-
-				-- In-Ear Detection (OHD)
-				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-					ui.column({ flexGrow = 1, gap = 1 }, {
-						ui.label({ text = noctalia.tr("panel.ohd"), fontSize = 13, color = "on_surface" }),
-						ui.label({ text = noctalia.tr("panel.ohd_desc"), fontSize = 11, color = "on_surface_variant" }),
-					}),
-					ui.toggle({
-						checked = snapshot.ohd == true,
-						onChange = function(v)
-							local enabled = (v == true or v == "true")
-							snapshot.ohd = enabled
-							sendCommand("set-ohd", enabled)
-							render()
-						end,
-					}),
-				}),
-
-				-- Conversation Awareness
-				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-					ui.column({ flexGrow = 1, gap = 1 }, {
-						ui.label({ text = noctalia.tr("panel.speech_detection"), fontSize = 13, color = "on_surface" }),
-						ui.label({ text = noctalia.tr("panel.speech_detection_desc"), fontSize = 11, color = "on_surface_variant" }),
-					}),
-					ui.toggle({
-						checked = snapshot.speech_detection == true,
-						onChange = function(v)
-							local enabled = (v == true or v == "true")
-							snapshot.speech_detection = enabled
-							sendCommand("set-speech-detection", enabled)
-							render()
-						end,
-					}),
-				}),
-
-				ui.separator({ thickness = 1, color = "outline/0.15" }),
-
-				-- Touch & Hold Gesture Header
-				ui.column({ gap = 2 }, {
-					ui.label({ text = noctalia.tr("panel.gesture_control"), fontSize = 12, fontWeight = "bold", color = "on_surface" }),
-					ui.label({ text = noctalia.tr("panel.gesture_control_desc"), fontSize = 11, color = "on_surface_variant" }),
-				}),
-
-				-- Gesture Table (ANC / Assistant rows x Left / Right columns)
-				ui.column({ gap = 6 }, {
-					-- Column Headers
-					ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
-						ui.spacer(),
-						ui.row({ align = "center", gap = 8 }, {
-							ui.row({ width = 36, justify = "center", align = "center" }, {
-								ui.label({
-									text = noctalia.tr("panel.left_col") or "Left",
-									fontSize = 11,
-									fontWeight = "bold",
-									color = "on_surface_variant",
-									textAlign = "center",
-								}),
-							}),
-							ui.row({ width = 36, justify = "center", align = "center" }, {
-								ui.label({
-									text = noctalia.tr("panel.right_col") or "Right",
-									fontSize = 11,
-									fontWeight = "bold",
-									color = "on_surface_variant",
-									textAlign = "center",
-								}),
-							}),
-						}),
-					}),
-
-					-- Row 1: Noise Control (ANC)
-					ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
-						ui.row({ align = "center", gap = 8, flexGrow = 1 }, {
-							ui.glyph({ name = "volume", size = 15, color = "on_surface_variant" }),
-							ui.label({ text = noctalia.tr("panel.gesture_anc"), fontSize = 12, color = "on_surface" }),
-						}),
-						ui.row({ align = "center", gap = 8 }, {
-							ui.row({ width = 36, justify = "center", align = "center" }, {
-								ui.button({
-									controlSize = "sm",
-									width = 36,
-									variant = (leftGesture == "anc") and "secondary" or "ghost",
-									glyph = (leftGesture == "anc") and "circle-dot" or "circle",
-									tooltip = "Left: " .. (noctalia.tr("panel.gesture_anc") or "Noise Control"),
-									onClick = function()
-										snapshot.gesture_left = "anc"
-										render()
-										sendCommand("set-gesture-side", { side = "left", action = "anc" })
-									end,
-								}),
-							}),
-							ui.row({ width = 36, justify = "center", align = "center" }, {
-								ui.button({
-									controlSize = "sm",
-									width = 36,
-									variant = (rightGesture == "anc") and "secondary" or "ghost",
-									glyph = (rightGesture == "anc") and "circle-dot" or "circle",
-									tooltip = "Right: " .. (noctalia.tr("panel.gesture_anc") or "Noise Control"),
-									onClick = function()
-										snapshot.gesture_right = "anc"
-										render()
-										sendCommand("set-gesture-side", { side = "right", action = "anc" })
-									end,
-								}),
-							}),
-						}),
-					}),
-
-					-- Row 2: Google Assistant
-					ui.row({ align = "center", justify = "space_between", paddingH = 6 }, {
-						ui.row({ align = "center", gap = 8, flexGrow = 1 }, {
-							ui.glyph({ name = "sparkles", size = 15, color = "on_surface_variant" }),
-							ui.label({ text = noctalia.tr("panel.gesture_assistant"), fontSize = 12, color = "on_surface" }),
-						}),
-						ui.row({ align = "center", gap = 8 }, {
-							ui.row({ width = 36, justify = "center", align = "center" }, {
-								ui.button({
-									controlSize = "sm",
-									width = 36,
-									variant = (leftGesture == "assistant") and "secondary" or "ghost",
-									glyph = (leftGesture == "assistant") and "circle-dot" or "circle",
-									tooltip = "Left: " .. (noctalia.tr("panel.gesture_assistant") or "Google Assistant"),
-									onClick = function()
-										snapshot.gesture_left = "assistant"
-										render()
-										sendCommand("set-gesture-side", { side = "left", action = "assistant" })
-									end,
-								}),
-							}),
-							ui.row({ width = 36, justify = "center", align = "center" }, {
-								ui.button({
-									controlSize = "sm",
-									width = 36,
-									variant = (rightGesture == "assistant") and "secondary" or "ghost",
-									glyph = (rightGesture == "assistant") and "circle-dot" or "circle",
-									tooltip = "Right: " .. (noctalia.tr("panel.gesture_assistant") or "Google Assistant"),
-									onClick = function()
-										snapshot.gesture_right = "assistant"
-										render()
-										sendCommand("set-gesture-side", { side = "right", action = "assistant" })
-									end,
-								}),
-							}),
-						}),
-					}),
-				}),
-
-				ui.separator({ thickness = 1, color = "outline/0.15" }),
-
-				-- Fast Pair BLE Scanning Toggle
-				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-					ui.column({ flexGrow = 1, gap = 1 }, {
-						ui.label({ text = noctalia.tr("panel.fast_pair_scan") or "Fast Pair BLE Scanning", fontSize = 12, color = "on_surface" }),
-						ui.label({ text = noctalia.tr("panel.fast_pair_scan_desc") or "Detect presence and availability when disconnected", fontSize = 11, color = "on_surface_variant" }),
-					}),
-					ui.toggle({
-						checked = snapshot.fast_pair_scan ~= false,
-						onChange = function(v)
-							local enabled = (v == true or v == "true")
-							snapshot.fast_pair_scan = enabled
-							sendCommand("set-fast-pair-scan", enabled)
-							render()
-						end,
-					}),
-				}),
-
-				-- BLE Scan Interval Row
-				ui.row({ align = "center", justify = "space_between", gap = 8 }, {
-					ui.label({ text = noctalia.tr("panel.scan_interval") or "BLE Scan Interval", fontSize = 12, color = "on_surface" }),
-					ui.row({ align = "center", gap = 4 }, {
-						ui.button({
-							controlSize = "sm",
-							variant = ((snapshot.scan_interval_secs or 10) == 5) and "secondary" or "ghost",
-							text = "5s",
-							onClick = function()
-								snapshot.scan_interval_secs = 5
-								render()
-								sendCommand("set-scan-interval", 5)
-							end,
-						}),
-						ui.button({
-							controlSize = "sm",
-							variant = ((snapshot.scan_interval_secs or 10) == 10) and "secondary" or "ghost",
-							text = "10s",
-							onClick = function()
-								snapshot.scan_interval_secs = 10
-								render()
-								sendCommand("set-scan-interval", 10)
-							end,
-						}),
-						ui.button({
-							controlSize = "sm",
-							variant = ((snapshot.scan_interval_secs or 10) == 15) and "secondary" or "ghost",
-							text = "15s",
-							onClick = function()
-								snapshot.scan_interval_secs = 15
-								render()
-								sendCommand("set-scan-interval", 15)
-							end,
-						}),
-						ui.button({
-							controlSize = "sm",
-							variant = ((snapshot.scan_interval_secs or 10) == 30) and "secondary" or "ghost",
-							text = "30s",
-							onClick = function()
-								snapshot.scan_interval_secs = 30
-								render()
-								sendCommand("set-scan-interval", 30)
-							end,
-						}),
-					}),
-				}),
-			}))
-		else
-			table.insert(body, ui.column({ gap = 0 }, {
-				settingsHeader,
-			}))
-		end
 	else
 		-- Not connected state
 		local isNearby = snapshot.nearby == true
@@ -570,7 +578,9 @@ local function render()
 			}))
 		end
 
-		table.insert(body, ui.column({ align = "center", gap = 12, padding = 20 }, notConnChildren))
+		table.insert(body, ui.column({ align = "center", gap = 12, padding = 16 }, notConnChildren))
+		table.insert(body, ui.separator({ thickness = 1, color = "outline/0.2" }))
+		table.insert(body, buildSettingsSection(false))
 	end
 
 	local titleText = snapshot.device_name or snapshot.model_name or noctalia.tr("panel.title")
