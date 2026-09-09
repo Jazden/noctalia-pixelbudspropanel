@@ -19,34 +19,51 @@ end
 
 local function render()
 	local connected = snapshot.connected == true
+	local nearby = snapshot.nearby == true
 
 	if hideWhenDisconnected then
-		barWidget.setVisible(connected)
+		barWidget.setVisible(connected or nearby)
 	else
 		barWidget.setVisible(true)
 	end
 
+	local container = barWidget.isVertical() and ui.column or ui.row
+
 	if not connected then
-		barWidget.setGlyph("headphones-off")
-		barWidget.setGlyphColor("disabled")
-		barWidget.setText("")
-		barWidget.setTooltip({
-			{ key = noctalia.tr("panel.title"), value = noctalia.tr("widget.not_connected") },
-			{ key = noctalia.tr("widget.action.left_click"), value = noctalia.tr("panel.title") }
-		})
+		if nearby then
+			barWidget.render(container({ gap = 4, align = "center" }, {
+				ui.glyph({ name = "headphones", color = "secondary" }),
+				ui.glyph({ name = "broadcast", color = "secondary", size = 13 }),
+			}))
+			local rssiStr = snapshot.rssi and string.format("%d dBm", snapshot.rssi) or "Detected"
+			barWidget.setTooltip({
+				{ key = snapshot.device_name or snapshot.model_name or noctalia.tr("panel.title"), value = noctalia.tr("panel.nearby_detected") or "Nearby (Fast Pair detected)" },
+				{ key = "Status", value = noctalia.tr("widget.available_to_connect") or "Available to connect" },
+				{ key = "Signal", value = rssiStr },
+				{ key = noctalia.tr("widget.action.left_click"), value = noctalia.tr("panel.title") }
+			})
+		else
+			barWidget.render(container({ gap = 4, align = "center" }, {
+				ui.glyph({ name = "headphones-off", color = "on_surface_variant" }),
+			}))
+			barWidget.setTooltip({
+				{ key = noctalia.tr("panel.title"), value = noctalia.tr("widget.not_connected") },
+				{ key = noctalia.tr("widget.action.left_click"), value = noctalia.tr("panel.title") }
+			})
+		end
 		return
 	end
 
 	local mode = snapshot.noise_mode or "off"
+	local glyphName = "headphones"
+	local glyphColor = "on_surface"
+
 	if mode == "active" or mode == "anc" then
-		barWidget.setGlyph("shield-check")
-		barWidget.setGlyphColor("primary")
+		glyphName = "shield-check"
+		glyphColor = "primary"
 	elseif mode == "aware" or mode == "transparency" then
-		barWidget.setGlyph("ear")
-		barWidget.setGlyphColor("secondary")
-	else
-		barWidget.setGlyph("headphones")
-		barWidget.setGlyphColor("default")
+		glyphName = "ear"
+		glyphColor = "secondary"
 	end
 
 	-- Pick battery level to show on bar (minimum of active buds, or whichever is available)
@@ -62,11 +79,15 @@ local function render()
 		bLevel = r
 	end
 
+	local children = {
+		ui.glyph({ name = glyphName, color = glyphColor }),
+	}
+
 	if bLevel >= 0 and not barWidget.isVertical() then
-		barWidget.setText(tostring(bLevel) .. "%")
-	else
-		barWidget.setText("")
+		table.insert(children, ui.label({ text = tostring(bLevel) .. "%" }))
 	end
+
+	barWidget.render(container({ gap = 4, align = "center" }, children))
 
 	-- Build detailed tooltip rows
 	local tooltipRows = {
