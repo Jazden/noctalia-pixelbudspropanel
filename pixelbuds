@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -e
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN="$(command -v pbpctrl 2>/dev/null || true)"
+if [ -z "$BIN" ] && [ -x "$HOME/.cargo/bin/pbpctrl" ]; then
+    BIN="$HOME/.cargo/bin/pbpctrl"
+elif [ -z "$BIN" ] && [ -x "$HOME/.local/bin/pbpctrl" ]; then
+    BIN="$HOME/.local/bin/pbpctrl"
+elif [ -z "$BIN" ] && [ -x "$DIR/bin/pbpctrl" ]; then
+    BIN="$DIR/bin/pbpctrl"
+fi
+
+if [ -z "$BIN" ] || [ ! -x "$BIN" ]; then
+    echo "Error: 'pbpctrl' executable not found on PATH." >&2
+    echo "Please install pbpctrl: cargo install --git https://github.com/qzed/pbpctrl.git" >&2
+    exit 1
+fi
+
+DEVICE="${DEVICE:-$(bluetoothctl devices Connected 2>/dev/null | grep -iE 'pixel buds|pixelbuds' | head -n1 | awk '{print $2}')}"
+if [ -z "$DEVICE" ]; then
+    echo "Error: No connected Pixel Buds detected." >&2
+    echo "Please connect your earbuds or specify DEVICE=<bluetooth-mac> ./pixelbuds" >&2
+    exit 1
+fi
+
+case "$1" in
+    battery|bat)
+        if [ -x "$GFPS" ]; then
+            "$GFPS" "$DEVICE"
+        else
+            "$BIN" -d "$DEVICE" show battery
+        fi
+        ;;
+    anc)
+        if [ -z "$2" ]; then
+            echo "Current ANC state:"
+            "$BIN" -d "$DEVICE" get anc
+            echo "ANC Gesture Loop:"
+            "$BIN" -d "$DEVICE" get anc-gesture-loop
+        else
+            "$BIN" -d "$DEVICE" set anc "$2"
+        fi
+        ;;
+    eq)
+        if [ -z "$2" ]; then
+            "$BIN" -d "$DEVICE" get eq
+        else
+            "$BIN" -d "$DEVICE" set eq "$2" "$3" "$4" "$5" "$6"
+        fi
+        ;;
+    gesture|hold)
+        if [ -z "$2" ]; then
+            echo "Current Hold Gesture action:"
+            "$BIN" -d "$DEVICE" get gesture-control
+        else
+            act="$2"
+            if [ "$act" = "toggle" ]; then
+                curr="$("$BIN" -d "$DEVICE" get gesture-control | tr '[:upper:]' '[:lower:]')"
+                if [[ "$curr" == *"anc"* ]]; then
+                    act="assistant"
+                else
+                    act="anc"
+                fi
+            fi
+            "$BIN" -d "$DEVICE" set gesture-control "$act" "$act"
+            echo "Hold Gesture set to: $act"
+        fi
+        ;;
+    info|status)
+        echo "=== Hardware ==="
+        "$BIN" -d "$DEVICE" show hardware
+        echo ""
+        echo "=== Software ==="
+        "$BIN" -d "$DEVICE" show software
+        echo ""
+        echo "=== Runtime & Battery ==="
+        "$BIN" -d "$DEVICE" show runtime
+        ;;
+    *)
+        "$BIN" -d "$DEVICE" "$@"
+        ;;
+esac

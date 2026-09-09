@@ -1,0 +1,67 @@
+{
+  "notify": {
+    "mode_changed": "Noise Control: %s",
+    "gesture_changed": "Hold Gesture: %s"
+  },
+  "panel": {
+    "battery": "Battery",
+    "case": "Case",
+    "case_offline": "Closed",
+    "charging": "Charging",
+    "guidance": "Connect your Pixel Buds Pro via Bluetooth to view battery status and control noise cancellation modes.",
+    "left": "Left Bud",
+    "mode": {
+      "active": "Noise Cancellation",
+      "anc": "Noise Cancellation",
+      "aware": "Transparency",
+      "transparency": "Transparency",
+      "off": "Off"
+    },
+    "noise_control": "Noise Control",
+    "right": "Right Bud",
+    "status": {
+      "connected": "Connected",
+      "disconnected": "Not Connected"
+    },
+    "title": "Pixel Buds Pro",
+    "equalizer": "5-Band Equalizer",
+    "eq_bands": {
+      "low_bass": "Low Bass",
+      "bass": "Bass",
+      "mid": "Mid",
+      "treble": "Treble",
+      "upper_treble": "Upper Treble"
+    },
+    "features": "Features",
+    "ohd": "In-Ear Detection",
+    "ohd_desc": "Pause audio automatically when removed",
+    "speech_detection": "Conversation Awareness",
+    "speech_detection_desc": "Pause audio and activate transparency when talking",
+    "gesture_control": "Hold for Noise Control",
+    "gesture_control_desc": "Toggle press & hold between ANC and Assistant",
+    "gesture_anc": "Noise Cancellation",
+    "gesture_assistant": "Assistant"
+  },
+  "plugin": {
+    "description": "Battery monitor, active noise cancellation (ANC), and 5-band equalizer control for Google Pixel Buds Pro",
+    "name": "Pixel Buds Pro"
+  },
+  "settings": {
+    "device_mac": {
+      "description": "Bluetooth MAC address of your Pixel Buds Pro. Leave blank to auto-detect.",
+      "label": "Pixel Buds MAC Address"
+    },
+    "hide_when_disconnected": {
+      "description": "Hide the bar widget when the earbuds are not connected.",
+      "label": "Hide when disconnected"
+    }
+  },
+  "widget": {
+    "action": {
+      "left_click": "Open Controls",
+      "right_click": "Cycle Noise Mode"
+    },
+    "mode": "Mode",
+    "not_connected": "Pixel Buds not connected"
+  }
+}
