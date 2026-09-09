@@ -287,9 +287,9 @@ end
 
 noctalia.state.watch(COMMAND_KEY, executeCommand)
 
--- Initial poll, then interval polling every 15 seconds
+-- Initial poll, then interval polling every 5 seconds
 pollStatus(false)
-noctalia.setUpdateInterval(15000)
+noctalia.setUpdateInterval(5000)
 
 function update()
 	pollStatus(false)
