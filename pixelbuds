@@ -50,6 +50,11 @@ if [ -S "$DAEMON_SOCK" ] && command -v pbpctrld >/dev/null 2>&1; then
             fi
             exit 0
             ;;
+        config)
+            shift
+            pbpctrld config "$@"
+            exit 0
+            ;;
     esac
 fi
 
